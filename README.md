@@ -24,6 +24,7 @@ cascades.
 ## Compilation
 
 `make clean`
+
 `make`
 
 
@@ -34,8 +35,11 @@ cascades.
 Detects objects within input panorama (eqr). Detected objects are written to a text file (see format below).
 
 `-a algo`: algorithm to use for object detection (`haar`)
+
 `--reprojection-window-size=640x480`: window size for reprojection task
+
 `--reprojection-dx=45`: horizontal angle increment for reprojection task
+
 `--reprojection-dy=45`: vertical angle increment for reprojection task
 
 
