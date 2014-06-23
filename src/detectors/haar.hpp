@@ -40,6 +40,9 @@
 #define __YAFDB_DETECTORS_HAAR_H_INCLUDE__
 
 
+#include <gnomonic-all.h>
+
+
 #include "detector.hpp"
 
 
@@ -48,11 +51,25 @@
  *
  */
 class HaarDetector : public ObjectDetector {
+protected:
+    /** Projection window width */
+    int width;
+
+    /** Projection window height */
+    int height;
+
+    /** Projection window horizontal aperture in degree */
+    double ax;
+
+    /** Projection window vertical aperture in degree **/
+    double ay;
+
+
 public:
     /**
      * Empty constructor.
      */
-    HaarDetector() : ObjectDetector() {
+    HaarDetector() : ObjectDetector(), width(1024), height(1024), ax(90.0), ay(90.0) {
     }
 
     /**
@@ -70,6 +87,35 @@ public:
      * \return true on success, false otherwise
      */
     virtual bool detect(const cv::Mat &source, std::vector<DetectedObject> &objects) {
+        cv::Mat window(this->width, this->height, source.type());
+        double hax = this->ax / 2;
+        double hay = this->ay / 2;
+
+        for (double x = hax; x <= 360.0 - hax; x += hax) {
+            for (double y = -90 + hay; y <= 90 - hay; y += hay) {
+                gnomonic_etg(
+                    source.data,
+                    source.cols,
+                    source.rows,
+                    source.channels(),
+                    window.data,
+                    window.cols,
+                    window.rows,
+                    window.channels(),
+                    x * ( M_PI / 180.0 ),
+                    y * ( M_PI / 180.0 ),
+                    hax * ( M_PI / 180.0 ),
+                    hay * ( M_PI / 180.0 ),
+                    gnomonic_interp_bicubicf
+                );
+
+                cv::namedWindow("window", CV_WINDOW_NORMAL);
+                cv::imshow("window", window);
+                while (cv::waitKey(0) <= 0);
+
+
+            }
+        }
         return true;
     }
 };

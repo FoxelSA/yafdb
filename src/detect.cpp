@@ -98,8 +98,8 @@ int main(int argc, char **argv) {
 
     while (true) {
         int index = -1;
-        int code = getopt_long(argc, argv, "", options, &index);
 
+        getopt_long(argc, argv, "", options, &index);
         if (index == -1) {
             if (argc != optind + 2) {
                 usage();

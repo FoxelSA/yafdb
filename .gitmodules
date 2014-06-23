@@ -1,0 +1,3 @@
+[submodule "libgnomonic"]
+	path = libgnomonic
+	url = https://github.com/FoxelSA/libgnomonic.git
