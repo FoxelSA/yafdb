@@ -64,12 +64,28 @@ protected:
     /** Projection window vertical aperture in degree **/
     double ay;
 
+    /** Projection window horizontal half-aperture in degree */
+    double hax;
+
+    /** Projection window vertical half-aperture in degree **/
+    double hay;
+
+
+    virtual void run(cv::CascadeClassifier &classifier, const cv::Mat &window, std::vector<cv::Rect> &objects, const cv::Scalar &color, cv::Mat &preview) {
+        classifier.detectMultiScale(window, objects, 1.05, 5, 0, cv::Size(10, 10), cv::Size(this->width / 2, this->height / 2));
+        for (std::vector<cv::Rect>::iterator it = objects.begin(); it != objects.end(); ++it) {
+            rectangle(preview, *it, color, 4);
+        }
+    }
+
 
 public:
     /**
      * Empty constructor.
      */
-    HaarDetector() : ObjectDetector(), width(1024), height(1024), ax(90.0), ay(90.0) {
+    HaarDetector() : ObjectDetector(), width(1024), height(1024), ax(60.0), ay(60.0) {
+        this->hax = this->ax / 2;
+        this->hay = this->ay / 2;
     }
 
     /**
@@ -87,12 +103,31 @@ public:
      * \return true on success, false otherwise
      */
     virtual bool detect(const cv::Mat &source, std::vector<DetectedObject> &objects) {
-        cv::Mat window(this->width, this->height, source.type());
-        double hax = this->ax / 2;
-        double hay = this->ay / 2;
+        cv::Mat windows(
+            256 * (((180 - this->ay) / this->hay) + 1),
+            256 * (((360 - this->ax) / this->hax) + 1),
+            source.type()
+        );
+        cv::Mat window(this->height, this->width, source.type());
+        cv::CascadeClassifier haar1, haar2, haar3, haar4, haar5;
+        int ix = 0, iy = 0;
 
-        for (double x = hax; x <= 360.0 - hax; x += hax) {
-            for (double y = -90 + hay; y <= 90 - hay; y += hay) {
+        haar1.load("haarcascades/haarcascade_frontalface_default.xml");
+        haar2.load("haarcascades/haarcascade_frontalface_alt.xml");
+        haar3.load("haarcascades/haarcascade_frontalface_alt2.xml");
+        haar4.load("haarcascades/haarcascade_frontalface_alt_tree.xml");
+        haar5.load("haarcascades/haarcascade_profileface.xml");
+        for (double y = 90 - this->hay; y >= -90 + this->hay; y -= this->hay) {
+            ix = 0;
+            for (double x = this->hax; x <= 360.0 - this->hax; x += this->hax) {
+                cv::Mat grayWindow;
+                std::vector<cv::Rect> window_objects;
+                cv::Mat region(
+                    windows,
+                    cv::Range(iy * 256, (iy + 1) * 256),
+                    cv::Range(ix * 256, (ix + 1) * 256)
+                );
+
                 gnomonic_etg(
                     source.data,
                     source.cols,
@@ -104,18 +139,30 @@ public:
                     window.channels(),
                     x * ( M_PI / 180.0 ),
                     y * ( M_PI / 180.0 ),
-                    hax * ( M_PI / 180.0 ),
-                    hay * ( M_PI / 180.0 ),
+                    this->hax * ( M_PI / 180.0 ),
+                    this->hay * ( M_PI / 180.0 ),
                     gnomonic_interp_bicubicf
                 );
 
-                cv::namedWindow("window", CV_WINDOW_NORMAL);
-                cv::imshow("window", window);
-                while (cv::waitKey(0) <= 0);
+                cv::cvtColor(window, grayWindow, cv::COLOR_RGB2GRAY);
+                cv::equalizeHist(grayWindow, grayWindow);
 
+                this->run(haar1, window, window_objects, cv::Scalar(255, 0, 0), window);
+                this->run(haar2, window, window_objects, cv::Scalar(0, 255, 0), window);
+                this->run(haar3, window, window_objects, cv::Scalar(0, 0, 255), window);
+                this->run(haar4, window, window_objects, cv::Scalar(255, 255, 0), window);
+                this->run(haar5, window, window_objects, cv::Scalar(255, 0, 255), window);
 
+                cv::resize(window, region, region.size());
+                cv::imshow("window", windows);
+                cv::waitKey(10);
+
+                ix++;
             }
+            iy++;
         }
+
+        while (cv::waitKey(0) != '\n');
         return true;
     }
 };

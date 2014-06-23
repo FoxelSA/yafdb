@@ -24,9 +24,8 @@ RELEASEFLAGS := -g -O0
 CPPFLAGS += -c -pipe $(foreach dir, $(INCLUDES), -I$(dir))
 CFLAGS += -std=gnu99 -Wall -funsigned-char
 CXXFLAGS += -std=gnu++11 -Wall -funsigned-char
-LDFLAGS += -pipe -lstdc++ -lm -lopencv_core -lopencv_imgproc -lopencv_contrib \
-	-lopencv_features2d -lopencv_calib3d -lopencv_photo -lopencv_video -lopencv_videostab \
-	-lopencv_highgui
+LDFLAGS += -pipe -lstdc++ -lm -lopencv_core -lopencv_imgproc -lopencv_features2d -lopencv_objdetect \
+	-lopencv_highgui -lopencv_contrib
 
 
 all: yafdb-detect yafdb-blur yafdb-test

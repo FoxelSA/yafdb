@@ -102,7 +102,10 @@ public:
         cv::resize(source, preview, cv::Size(), 0.25, 0.25);
         cv::namedWindow("preview", CV_WINDOW_NORMAL);
         cv::imshow("preview", preview);
-        while (cv::waitKey(0) <= 0);
+        while (cv::waitKey(0) != '\n');
+
+        cv::destroyWindow("preview");
+        cv::waitKey(1);
     }
 
     /*
@@ -120,7 +123,10 @@ public:
 
         cv::namedWindow("preview", CV_WINDOW_NORMAL);
         cv::imshow("preview", preview);
-        while (cv::waitKey(0) <= 0);
+        while (cv::waitKey(0) != '\n');
+
+        cv::destroyWindow("preview");
+        cv::waitKey(1);
     }
 
 
