@@ -31,9 +31,9 @@ cascades.
 
 Detects objects within input panorama (eqr). Detected objects are written to a text file (see format below).
 
-	yafdb-detect -a algo input-panorama.tiff output-objects.txt
+	yafdb-detect --algorithm algo input-panorama.tiff output-objects.txt
 
-	-a algo: algorithm to use for object detection ("haar")
+	--algorithm algo: algorithm to use for object detection ("haar")
 	--reprojection-window-size=640x480: window size for reprojection task
 	--reprojection-dx=45: horizontal angle increment for reprojection task
 	--reprojection-dy=45: vertical angle increment for reprojection task
@@ -43,9 +43,9 @@ Detects objects within input panorama (eqr). Detected objects are written to a t
 
 Blurs detected objects and write modified panorama as output.
 
-	yafdb-blur -a algo input-panorama.tiff input-objects.txt output-panorama.tiff
+	yafdb-blur --algorithm algo input-panorama.tiff input-objects.txt output-panorama.tiff
 
-	-a algo: algorithm to use for object detection ("default")
+	--algorithm algo: algorithm to use for object detection ("default")
 
 
 ## Usage: performance validation
