@@ -62,7 +62,6 @@ static const char *objects_file = NULL;
 
 
 static struct option options[] = {
-    {"algorithm",           required_argument, 0,                 'a'},
     {0, 0, 0, 0}
 };
 
