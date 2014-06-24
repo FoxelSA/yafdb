@@ -66,25 +66,51 @@
 #define OPTION_GNOMONIC_WIDTH         2
 #define OPTION_GNOMONIC_APERTURE_X    3
 #define OPTION_GNOMONIC_APERTURE_Y    4
+#define OPTION_HAAR_MODEL             5
+#define OPTION_HAAR_SCALE             6
+#define OPTION_HAAR_MIN_OVERLAP       7
 
+
+struct haar_model {
+    std::string className;
+    std::string file;
+};
 
 static int algorithm = ALGORITHM_HAAR;
 static int gnomonic_enabled = 0;
 static int gnomonic_width = 256;
 static double gnomonic_aperture_x = 30;
 static double gnomonic_aperture_y = 30;
+static std::vector<struct haar_model> haar_models;
+static double haar_scale = 1.1;
+static int haar_min_overlap = 5;
 static const char *source_file = NULL;
 static const char *objects_file = NULL;
 
 
 static struct option options[] = {
-    {"algorithm", required_argument, 0, 'a'},
-    {"gnomonic", no_argument, &gnomonic_enabled, 1},
-    {"gnomonic-width", required_argument, 0, 0},
-    {"gnomonic-aperture-x", required_argument, 0, 0},
-    {"gnomonic-aperture-y", required_argument, 0, 0},
+    {"algorithm",           required_argument, 0,                 'a'},
+    {"gnomonic",            no_argument,       &gnomonic_enabled,  1},
+    {"gnomonic-width",      required_argument, 0,                  0},
+    {"gnomonic-aperture-x", required_argument, 0,                  0},
+    {"gnomonic-aperture-y", required_argument, 0,                  0},
+    {"haar-model",          required_argument, 0,                  0},
+    {"haar-scale",          required_argument, 0,                  0},
+    {"haar-min-overlap",    required_argument, 0,                  0},
     {0, 0, 0, 0}
 };
+
+
+static struct haar_model haar_model_parse(const std::string &value) {
+    std::string classModel(optarg);
+    int split = classModel.find_first_of(':');
+    struct haar_model model = {
+        split > 0 ? classModel.substr(0, split) : "",
+        classModel.substr(split + 1)
+    };
+
+    return model;
+}
 
 
 /**
@@ -97,11 +123,22 @@ void usage() {
     printf("Detects objects within input panorama (eqr). Detected objects are\n");
     printf("written to a text file.\n\n");
 
+    printf("General options:\n\n");
     printf("--algorithm algo: algorithm to use for object detection ('haar')\n");
-    printf("--gnomonic: activate gnomonic reprojection task\n");
-    printf("--gnomonic-width 256: window width for reprojection task\n");
-    printf("--gnomonic-aperture-x 30: horizontal angle increment for reprojection task\n");
-    printf("--gnomonic-aperture-y 30: vertical angle increment for reprojection task\n");
+    printf("\n");
+
+    printf("Gnomonic projection options:\n\n");
+    printf("--gnomonic: activate task\n");
+    printf("--gnomonic-width 256: projection window width\n");
+    printf("--gnomonic-aperture-x 30: horizontal projection aperture\n");
+    printf("--gnomonic-aperture-y 30: vertical projection aperture\n");
+    printf("\n");
+
+    printf("Haar-cascades options:\n\n");
+    printf("--haar-model class:file.xml: haar model file with class name (allowed multiple times)\n");
+    printf("--haar-scale 1.1: haar reduction scale factor\n");
+    printf("--haar-min-overlap 5: haar minimum detection overlap\n");
+    printf("\n");
 }
 
 
@@ -160,6 +197,25 @@ int main(int argc, char **argv) {
             gnomonic_aperture_y = atof(optarg);
             break;
 
+        case OPTION_HAAR_MODEL: {
+                struct haar_model model = haar_model_parse(optarg);
+
+                if (access(model.file.c_str(), R_OK)) {
+                    fprintf(stderr, "Error: haar model file not readable: %s\n", model.file.c_str());
+                    return 2;
+                }
+                haar_models.push_back(model);
+            }
+            break;
+
+        case OPTION_HAAR_SCALE:
+            haar_scale = atof(optarg);
+            break;
+
+        case OPTION_HAAR_MIN_OVERLAP:
+            haar_min_overlap = atoi(optarg);
+            break;
+
         default:
             usage();
             return 1;
@@ -182,18 +238,14 @@ int main(int argc, char **argv) {
         detector = new ObjectDetector();
         break;
 
-    case ALGORITHM_HAAR:
-        detector = (new MultiDetector())->addDetector(
-            new HaarDetector("frontface", "haarcascades/haarcascade_frontalface_default.xml")
-        )->addDetector(
-            new HaarDetector("frontface", "haarcascades/haarcascade_frontalface_alt.xml")
-        )->addDetector(
-            new HaarDetector("frontface", "haarcascades/haarcascade_frontalface_alt2.xml")
-        )->addDetector(
-            new HaarDetector("frontface", "haarcascades/haarcascade_frontalface_alt_tree.xml")
-        )->addDetector(
-            new HaarDetector("profileface", "haarcascades/haarcascade_profileface.xml")
-        );
+    case ALGORITHM_HAAR: {
+            MultiDetector *multiDetector = new MultiDetector();
+
+            for (std::vector<struct haar_model>::const_iterator it = haar_models.begin(); it != haar_models.end(); ++it) {
+                multiDetector->addDetector(new HaarDetector((*it).className, (*it).file, haar_scale, haar_min_overlap));
+            }
+            detector = multiDetector;
+        }
         break;
 
     default:

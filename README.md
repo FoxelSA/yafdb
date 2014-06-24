@@ -31,15 +31,26 @@ cascades.
 
 ## Usage: object detection
 
-Detects objects within input panorama (eqr). Detected objects are written to a text file (see format below).
-
 	yafdb-detect --algorithm algo input-panorama.tiff output-objects.txt
 
+	Detects objects within input panorama (eqr). Detected objects are written to a text file.
+
+	General options:
+
 	--algorithm algo: algorithm to use for object detection ('haar')
-	--gnomonic: activate gnomonic reprojection task
-	--gnomonic-width 256: window width for reprojection task
-	--gnomonic-aperture-x 30: horizontal angle increment for reprojection task
-	--gnomonic-aperture-y 30: vertical angle increment for reprojection task
+
+	Gnomonic projection options:
+
+	--gnomonic: activate task
+	--gnomonic-width 256: projection window width
+	--gnomonic-aperture-x 30: horizontal projection aperture
+	--gnomonic-aperture-y 30: vertical projection aperture
+
+	Haar-cascades options:
+
+	--haar-model class:file.xml: haar model file with class name (allowed multiple times)
+	--haar-scale 1.1: haar reduction scale factor
+	--haar-min-overlap 5: haar minimum detection overlap
 
 
 ## Usage: object blurring
