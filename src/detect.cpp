@@ -43,6 +43,7 @@
 #include <errno.h>
 #include <getopt.h>
 
+#include "detectors/gnomonic.hpp"
 #include "detectors/haar.hpp"
 
 
@@ -151,9 +152,21 @@ int main(int argc, char **argv) {
     case ALGORITHM_NONE:
         detector = new ObjectDetector();
         break;
+
     case ALGORITHM_HAAR:
-        detector = new HaarDetector();
+        detector = (new GnomonicProjectionDetector(256, 30, 30))->addDetector(
+            new HaarDetector("frontface", "haarcascades/haarcascade_frontalface_default.xml")
+        )->addDetector(
+            new HaarDetector("frontface", "haarcascades/haarcascade_frontalface_alt.xml")
+        )->addDetector(
+            new HaarDetector("frontface", "haarcascades/haarcascade_frontalface_alt2.xml")
+        )->addDetector(
+            new HaarDetector("frontface", "haarcascades/haarcascade_frontalface_alt_tree.xml")
+        )->addDetector(
+            new HaarDetector("profileface", "haarcascades/haarcascade_profileface.xml")
+        );
         break;
+
     default:
         fprintf(stderr, "Error: no detector instantiated!\n");
         return 3;
@@ -164,10 +177,10 @@ int main(int argc, char **argv) {
 
     if (detector != NULL) {
         // display source file
-        detector->preview(source);
+        // detector->preview(source);
 
         // run detection algorithm
-        std::vector<DetectedObject> objects;
+        std::list<DetectedObject> objects;
 
         if (detector->detect(source, objects)) {
             success = true;
