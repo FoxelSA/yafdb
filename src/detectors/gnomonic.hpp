@@ -50,8 +50,11 @@
  * Object detector with gnomonic projection.
  *
  */
-class GnomonicProjectionDetector : public MultiDetector {
+class GnomonicProjectionDetector : public ObjectDetector {
 protected:
+    /** Underlying object detector */
+    ObjectDetector* detector;
+
     /** Projection window width */
     int width;
 
@@ -75,7 +78,7 @@ public:
     /**
      * Empty constructor.
      */
-    GnomonicProjectionDetector() : MultiDetector(), width(512), height(512), ax(60.0), ay(60.0) {
+    GnomonicProjectionDetector() : ObjectDetector(), detector(NULL), width(512), height(512), ax(60.0), ay(60.0) {
         this->hax = this->ax / 2;
         this->hay = this->ay / 2;
     }
@@ -83,11 +86,12 @@ public:
     /**
      * Default constructor.
      *
+     * \param detector underlying object detector
      * \param width projection window width in pixels
      * \param ax projection window horizontal aperture in degree
      * \param ay projection window vertical aperture in degree
      */
-    GnomonicProjectionDetector(int width, double ax = 60.0, double ay = 60.0) : MultiDetector(), width(width), height(width * ay / ax), ax(ax), ay(ay) {
+    GnomonicProjectionDetector(ObjectDetector* detector, int width, double ax = 60.0, double ay = 60.0) : ObjectDetector(), detector(detector), width(width), height(width * ay / ax), ax(ax), ay(ay) {
         this->hax = this->ax / 2;
         this->hay = this->ay / 2;
     }
@@ -96,6 +100,7 @@ public:
      * Empty destructor.
      */
     virtual ~GnomonicProjectionDetector() {
+        delete detector;
     }
 
 
@@ -194,7 +199,7 @@ public:
                     gnomonic_interp_bilinearf
                 );
 
-                if (!MultiDetector::detect(window, window_objects)) {
+                if (this->detector != NULL && !this->detector->detect(window, window_objects)) {
                     return false;
                 }
                 for (std::list<DetectedObject>::const_iterator it = window_objects.begin(); it != window_objects.end(); ++it) {

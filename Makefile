@@ -27,6 +27,9 @@ CXXFLAGS += -std=gnu++11 -Wall -funsigned-char
 LDFLAGS += -pipe -lstdc++ -lm -lopencv_core -lopencv_imgproc -lopencv_features2d -lopencv_objdetect \
 	-lopencv_highgui -lopencv_contrib
 
+# System detection
+BASE_DIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))/
+
 
 all: yafdb-detect yafdb-blur yafdb-test
 
@@ -40,24 +43,24 @@ clean:
 
 
 yafdb-detect: $(SHARED_OBJECTS) $(LIBGNOMONIC_OBJECTS) $(DETECT_OBJECTS)
-	@echo "linking program $@..."
+	@echo "linking $(subst $(BASE_DIR),,$@)..."
 	@$(LINK.o) $(RELEASEFLAGS) -o $@ $^
 
 yafdb-blur: $(SHARED_OBJECTS) $(BLUR_OBJECTS)
-	@echo "linking program $@..."
+	@echo "linking $(subst $(BASE_DIR),,$@)..."
 	@$(LINK.o) $(RELEASEFLAGS) -o $@ $^
 
 yafdb-test: $(SHARED_OBJECTS) $(TEST_OBJECTS)
-	@echo "linking program $@..."
+	@echo "linking $(subst $(BASE_DIR),,$@)..."
 	@$(LINK.o) $(RELEASEFLAGS) -o $@ $^
 
 
 %.o: %.c
-	@echo "compiling $<..."
+	@echo "compiling $(subst $(BASE_DIR),,$<)..."
 	@$(COMPILE.c) $(RELEASEFLAGS) -o $@ $<
 
 %.o: %.cpp
-	@echo "compiling $<..."
+	@echo "compiling $(subst $(BASE_DIR),,$<)..."
 	@$(COMPILE.cpp) $(RELEASEFLAGS) -o $@ $<
 
 

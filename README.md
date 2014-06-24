@@ -23,6 +23,8 @@ cascades.
 
 ## Compilation
 
+	git submodule init
+	git submodule update
 	make clean
 	make
 
@@ -33,10 +35,11 @@ Detects objects within input panorama (eqr). Detected objects are written to a t
 
 	yafdb-detect --algorithm algo input-panorama.tiff output-objects.txt
 
-	--algorithm algo: algorithm to use for object detection ("haar")
-	--reprojection-window-size=640x480: window size for reprojection task
-	--reprojection-dx=45: horizontal angle increment for reprojection task
-	--reprojection-dy=45: vertical angle increment for reprojection task
+	--algorithm algo: algorithm to use for object detection ('haar')
+	--gnomonic: activate gnomonic reprojection task
+	--gnomonic-width 256: window width for reprojection task
+	--gnomonic-aperture-x 30: horizontal angle increment for reprojection task
+	--gnomonic-aperture-y 30: vertical angle increment for reprojection task
 
 
 ## Usage: object blurring

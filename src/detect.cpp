@@ -48,26 +48,43 @@
 
 
 /*
- * Program arguments.
- *
- */
-
-#define OPTION_ALGORITHM    0
-
-
-static struct option options[] = {
-    {"algorithm", required_argument, 0, 'a'},
-    {0, 0, 0, 0}
-};
-
-
-/*
  * List of supported algorithms.
  *
  */
 
 #define ALGORITHM_NONE      0
 #define ALGORITHM_HAAR      1
+
+
+/*
+ * Program arguments.
+ *
+ */
+
+#define OPTION_ALGORITHM              0
+#define OPTION_GNOMONIC               1
+#define OPTION_GNOMONIC_WIDTH         2
+#define OPTION_GNOMONIC_APERTURE_X    3
+#define OPTION_GNOMONIC_APERTURE_Y    4
+
+
+static int algorithm = ALGORITHM_HAAR;
+static int gnomonic_enabled = 0;
+static int gnomonic_width = 256;
+static double gnomonic_aperture_x = 30;
+static double gnomonic_aperture_y = 30;
+static const char *source_file = NULL;
+static const char *objects_file = NULL;
+
+
+static struct option options[] = {
+    {"algorithm", required_argument, 0, 'a'},
+    {"gnomonic", no_argument, &gnomonic_enabled, 1},
+    {"gnomonic-width", required_argument, 0, 0},
+    {"gnomonic-aperture-x", required_argument, 0, 0},
+    {"gnomonic-aperture-y", required_argument, 0, 0},
+    {0, 0, 0, 0}
+};
 
 
 /**
@@ -81,9 +98,10 @@ void usage() {
     printf("written to a text file.\n\n");
 
     printf("--algorithm algo: algorithm to use for object detection ('haar')\n");
-    printf("--reprojection-window-size=640x480: window size for reprojection task\n");
-    printf("--reprojection-dx=45: horizontal angle increment for reprojection task\n");
-    printf("--reprojection-dy=45: vertical angle increment for reprojection task\n");
+    printf("--gnomonic: activate gnomonic reprojection task\n");
+    printf("--gnomonic-width 256: window width for reprojection task\n");
+    printf("--gnomonic-aperture-x 30: horizontal angle increment for reprojection task\n");
+    printf("--gnomonic-aperture-y 30: vertical angle increment for reprojection task\n");
 }
 
 
@@ -93,10 +111,6 @@ void usage() {
  */
 int main(int argc, char **argv) {
     // parse arguments
-    int algorithm = ALGORITHM_HAAR;
-    const char *source_file = NULL;
-    const char *objects_file = NULL;
-
     while (true) {
         int index = -1;
 
@@ -131,6 +145,21 @@ int main(int argc, char **argv) {
             }
             break;
 
+        case OPTION_GNOMONIC:
+            break;
+
+        case OPTION_GNOMONIC_WIDTH:
+            gnomonic_width = atoi(optarg);
+            break;
+
+        case OPTION_GNOMONIC_APERTURE_X:
+            gnomonic_aperture_x = atof(optarg);
+            break;
+
+        case OPTION_GNOMONIC_APERTURE_Y:
+            gnomonic_aperture_y = atof(optarg);
+            break;
+
         default:
             usage();
             return 1;
@@ -154,7 +183,7 @@ int main(int argc, char **argv) {
         break;
 
     case ALGORITHM_HAAR:
-        detector = (new GnomonicProjectionDetector(256, 30, 30))->addDetector(
+        detector = (new MultiDetector())->addDetector(
             new HaarDetector("frontface", "haarcascades/haarcascade_frontalface_default.xml")
         )->addDetector(
             new HaarDetector("frontface", "haarcascades/haarcascade_frontalface_alt.xml")
@@ -170,6 +199,11 @@ int main(int argc, char **argv) {
     default:
         fprintf(stderr, "Error: no detector instantiated!\n");
         return 3;
+    }
+
+    // setup gnomonic reprojection task
+    if (gnomonic_enabled) {
+        detector = new GnomonicProjectionDetector(detector, gnomonic_width, gnomonic_aperture_x, gnomonic_aperture_y);
     }
 
     // detect objects in source image
