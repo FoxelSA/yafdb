@@ -43,6 +43,13 @@
 #include <errno.h>
 #include <getopt.h>
 
+#include <string>
+#include <list>
+#include <vector>
+
+#include <opencv2/opencv.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
 #include "detectors/gnomonic.hpp"
 #include "detectors/haar.hpp"
 
@@ -118,10 +125,9 @@ static struct haar_model haar_model_parse(const std::string &value) {
  *
  */
 void usage() {
-    printf("yafdb-detect --algorithm algo input-panorama.tiff output-objects.txt\n\n");
+    printf("yafdb-detect --algorithm algo input-image.tiff output-objects.txt\n\n");
 
-    printf("Detects objects within input panorama (eqr). Detected objects are\n");
-    printf("written to a text file.\n\n");
+    printf("Detects objects within input image. Detected objects are written to a text file.\n\n");
 
     printf("General options:\n\n");
     printf("--algorithm algo: algorithm to use for object detection ('haar')\n");

@@ -31,9 +31,9 @@ cascades.
 
 ## Usage: object detection
 
-	yafdb-detect --algorithm algo input-panorama.tiff output-objects.txt
+	yafdb-detect --algorithm algo input-image.tiff output-objects.txt
 
-	Detects objects within input panorama (eqr). Detected objects are written to a text file.
+	Detects objects within input image. Detected objects are written to a text file.
 
 	General options:
 
@@ -55,19 +55,22 @@ cascades.
 
 ## Usage: object blurring
 
-Blurs detected objects and write modified panorama as output.
+	yafdb-blur --algorithm algo input-image.tiff input-objects.txt output-image.tiff
 
-	yafdb-blur --algorithm algo input-panorama.tiff input-objects.txt output-panorama.tiff
+	Blurs detected objects and write modified image as output.
 
-	--algorithm algo: algorithm to use for object detection ("default")
+	General options:
+
+	--algorithm algo: algorithm to use for blurring ('default')
 
 
 ## Usage: performance validation
 
-Compute the detection error rate by comparing optimal area given in reference bitmap mask (black=none, white=object)
-to the detected area given in input text file.
+	yafdb-test input-image.tiff mask-image.tiff input-objects.txt
 
-	yafdb-test input-panorama.tiff reference-mask.tiff detected-objects.txt
+	Compute the detection error rate by comparing optimal area given in
+	reference bitmap mask (black=none, white=object) to the detected area
+	given in input text file.
 
 
 =

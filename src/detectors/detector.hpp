@@ -40,12 +40,6 @@
 #define __YAFDB_DETECTORS_DETECTOR_H_INCLUDE__
 
 
-#include <string>
-#include <list>
-#include <opencv2/opencv.hpp>
-#include <opencv2/highgui/highgui.hpp>
-
-
 /**
  * Detected object instance.
  *
