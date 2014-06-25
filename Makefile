@@ -6,8 +6,8 @@ INCLUDES += $(realpath libgnomonic/src/)
 SHARED_SOURCES := $(realpath $(filter-out src/blur.cpp src/detect.cpp src/preview.cpp src/test.cpp, $(wildcard src/*.c src/*.cpp)))
 LIBGNOMONIC_SOURCES := $(realpath $(wildcard libgnomonic/src/*.c libgnomonic/src/*.cpp))
 
-DETECT_SOURCES := $(realpath src/detect.cpp)
 BLUR_SOURCES := $(realpath src/blur.cpp)
+DETECT_SOURCES := $(realpath src/detect.cpp)
 PREVIEW_SOURCES := $(realpath src/preview.cpp)
 TEST_SOURCES := $(realpath src/test.cpp)
 
@@ -15,8 +15,8 @@ TEST_SOURCES := $(realpath src/test.cpp)
 SHARED_OBJECTS := $(addsuffix .o, $(basename $(SHARED_SOURCES)))
 LIBGNOMONIC_OBJECTS := $(addsuffix .o, $(basename $(LIBGNOMONIC_SOURCES)))
 
-DETECT_OBJECTS := $(addsuffix .o, $(basename $(DETECT_SOURCES)))
 BLUR_OBJECTS := $(addsuffix .o, $(basename $(BLUR_SOURCES)))
+DETECT_OBJECTS := $(addsuffix .o, $(basename $(DETECT_SOURCES)))
 PREVIEW_OBJECTS := $(addsuffix .o, $(basename $(PREVIEW_SOURCES)))
 TEST_OBJECTS := $(addsuffix .o, $(basename $(TEST_SOURCES)))
 
@@ -33,22 +33,23 @@ LDFLAGS += -pipe -lstdc++ -lm -lopencv_core -lopencv_imgproc -lopencv_features2d
 BASE_DIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))/
 
 
-all: yafdb-detect yafdb-blur yafdb-test
+all: yafdb-blur yafdb-detect yafdb-preview yafdb-test
 
 clean:
-	@rm -f yafdb-detect yafdb-blur yafdb-preview yafdb-test
+	@rm -f yafdb-blur yafdb-detect yafdb-preview yafdb-test
 	@rm -f $(SHARED_OBJECTS)
 	@rm -f $(LIBGNOMONIC_OBJECTS)
-	@rm -f $(DETECT_OBJECTS)
 	@rm -f $(BLUR_OBJECTS)
+	@rm -f $(DETECT_OBJECTS)
+	@rm -f $(PREVIEW_OBJECTS)
 	@rm -f $(TEST_OBJECTS)
 
 
-yafdb-detect: $(SHARED_OBJECTS) $(LIBGNOMONIC_OBJECTS) $(DETECT_OBJECTS)
+yafdb-blur: $(SHARED_OBJECTS) $(BLUR_OBJECTS)
 	@echo "linking $(subst $(BASE_DIR),,$@)..."
 	@$(LINK.o) $(RELEASEFLAGS) -o $@ $^
 
-yafdb-blur: $(SHARED_OBJECTS) $(BLUR_OBJECTS)
+yafdb-detect: $(SHARED_OBJECTS) $(LIBGNOMONIC_OBJECTS) $(DETECT_OBJECTS)
 	@echo "linking $(subst $(BASE_DIR),,$@)..."
 	@$(LINK.o) $(RELEASEFLAGS) -o $@ $^
 
