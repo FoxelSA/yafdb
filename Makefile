@@ -36,7 +36,7 @@ BASE_DIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))/
 all: yafdb-detect yafdb-blur yafdb-test
 
 clean:
-	@rm -f yafdb-detect yafdb-blur yafdb-test
+	@rm -f yafdb-detect yafdb-blur yafdb-preview yafdb-test
 	@rm -f $(SHARED_OBJECTS)
 	@rm -f $(LIBGNOMONIC_OBJECTS)
 	@rm -f $(DETECT_OBJECTS)
