@@ -42,11 +42,10 @@
 
 #include <gnomonic-all.h>
 
-
 #include "detector.hpp"
 
 
-#define PREVIEW_SIZE 256
+// #define PREVIEW_SIZE 256
 
 
 /**
