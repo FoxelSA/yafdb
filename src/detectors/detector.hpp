@@ -41,6 +41,113 @@
 
 
 /**
+ * A generic bounding box.
+ *
+ */
+class BoundingBox {
+public:
+    /** Top-left / north-west point */
+    double p1[2];
+
+    /** Bottom-right / south-east point */
+    double p2[2];
+
+
+    /**
+     * Empty constructor.
+     */
+    BoundingBox() : p1 { 0, 0 }, p2 { 0, 0 } {
+    }
+
+    /**
+     * Default constructor.
+     *
+     * \param x1 x-coordinate of first point
+     * \param y1 y-coordinate of first point
+     * \param x2 x-coordinate of second point
+     * \param y2 y-coordinate of second point
+     */
+    BoundingBox(double x1, double y1, double x2, double y2) : p1 { x1, y1 }, p2 { x2, y2 } {
+    }
+
+    /**
+     * Default constructor.
+     *
+     * \param x1 x-coordinate of first point
+     * \param y1 y-coordinate of first point
+     * \param x2 x-coordinate of second point
+     * \param y2 y-coordinate of second point
+     */
+    BoundingBox(const cv::Rect &rect) : p1 { (double)rect.x, (double)rect.y }, p2 { (double)(rect.x + rect.width), (double)(rect.y + rect.height) } {
+    }
+
+    /**
+     * Default constructor.
+     *
+     * \param x1 x-coordinate of first point
+     * \param y1 y-coordinate of first point
+     * \param x2 x-coordinate of second point
+     * \param y2 y-coordinate of second point
+     */
+    BoundingBox(const cv::Rect_<double> &rect) : p1 { rect.x, rect.y }, p2 { rect.x + rect.width, rect.y + rect.height } {
+    }
+
+    /**
+     * Storage constructor.
+     *
+     * \param node storage node to read from
+     */
+    BoundingBox(const cv::FileNode &node) {
+        cv::Rect_<double> rect;
+
+        node >> rect;
+        this->p1[0] = rect.x;
+        this->p1[1] = rect.y;
+        this->p2[0] = rect.x + rect.width;
+        this->p2[1] = rect.y + rect.height;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * \param ref reference object
+     */
+    BoundingBox(const BoundingBox &ref) : p1 { ref.p1[0], ref.p1[1] }, p2 { ref.p2[0], ref.p2[1] } {
+    }
+
+
+    /**
+     * Convert bounding box to opencv rectangle.
+     *
+     * \return opencv rectangle
+     */
+    cv::Rect_<double> rect() const {
+        return cv::Rect_<double>(
+            this->p1[0],
+            this->p1[1],
+            this->p2[0] - this->p1[0],
+            this->p2[1] - this->p1[1]
+        );
+    }
+
+    /**
+     * Convert bounding box to opencv rectangle assuming bounding box is given
+     * in spherical coordinates.
+     *
+     * \return opencv rectangle
+     */
+    cv::Rect eqrRect(int width, int height) const {
+        int x1 = (int)(this->p1[0] / (2 * M_PI) * (width - 1));
+        int y1 = (int)((-this->p1[1] + M_PI / 2) / M_PI * (height - 1));
+        int x2 = (int)(this->p2[0] / (2 * M_PI) * (width - 1));
+        int y2 = (int)((-this->p2[1] + M_PI / 2) / M_PI * (height - 1));
+
+        return cv::Rect(x1, y1, x2 - x1, y2 - y1);
+    }
+};
+
+
+/**
  * Detected object instance.
  *
  */
@@ -50,7 +157,7 @@ public:
     std::string className;
 
     /** Rough bounding area in source image */
-    cv::Rect area;
+    BoundingBox area;
 
 
     /**
@@ -63,14 +170,36 @@ public:
      * Default constructor.
      *
      * \param className object class name
+     * \param area bounding area
      */
-    DetectedObject(const std::string &className, const cv::Rect &area) : className(className), area(area) {
+    DetectedObject(const std::string &className, const BoundingBox &area) : className(className), area(area) {
+    }
+
+    /**
+     * Storage constructor.
+     *
+     * \param node storage node to read from
+     */
+    DetectedObject(const cv::FileNode &node) : className(node["className"]), area(node["area"]) {
     }
 
     /**
      * Copy constructor.
      */
     DetectedObject(const DetectedObject &ref) : className(ref.className), area(ref.area) {
+    }
+
+
+    /**
+     * Write detected object to storage.
+     *
+     * \param fs storage to write to
+     */
+    void write(cv::FileStorage &fs) const {
+        fs << "{";
+        fs << "className" << this->className;
+        fs << "area" << this->area.rect();
+        fs << "}";
     }
 };
 
@@ -94,47 +223,14 @@ public:
     }
 
 
-    /*
-     * Called to display source image.
+    /**
+     * Check if this object detector supports color images.
      *
-     * \param source source image to display
+     * \return true if detector works with color images, false otherwise.
      */
-    virtual void preview(const cv::Mat &source) {
-        cv::Mat preview;
-
-        cv::resize(source, preview, cv::Size(), 0.25, 0.25);
-        cv::namedWindow("preview", CV_WINDOW_NORMAL);
-        cv::imshow("preview", preview);
-        while (cv::waitKey(0) != '\n');
-
-        cv::destroyWindow("preview");
-        cv::waitKey(1);
+    virtual bool supportsColor() const {
+        return true;
     }
-
-    /*
-     * Called to display source image with detected objects.
-     *
-     * \param source source image to display
-     * \param objects list of detected objects
-     */
-    virtual void preview(const cv::Mat &source, const std::list<DetectedObject> &objects) {
-        cv::Mat preview(source);
-        cv::Mat scaledPreview;
-
-        for (std::list<DetectedObject>::const_iterator it = objects.begin(); it != objects.end(); ++it) {
-            // TODO: display label
-            rectangle(preview, (*it).area, cv::Scalar(0, 255, 255), 4);
-        }
-        cv::resize(preview, scaledPreview, cv::Size(), 0.25, 0.25);
-
-        cv::namedWindow("preview", CV_WINDOW_NORMAL);
-        cv::imshow("preview", scaledPreview);
-        while (cv::waitKey(0) != '\n');
-
-        cv::destroyWindow("preview");
-        cv::waitKey(1);
-    }
-
 
     /*
      * Execute object detector against given image.
@@ -145,6 +241,29 @@ public:
      */
     virtual bool detect(const cv::Mat &source, std::list<DetectedObject> &objects) {
         return false;
+    }
+
+
+    /**
+     * Load detected objects from yml file.
+     *
+     * \param file yml filename
+     * \param objects output list of detected objects
+     * \return true on success, false otherwise
+     */
+    static bool load(const std::string &file, std::list<DetectedObject> &objects) {
+        cv::FileStorage fs(file, cv::FileStorage::READ);
+
+        if (!fs.isOpened()) {
+            return false;
+        }
+
+        cv::FileNode objectsNode = fs["objects"];
+
+        for (cv::FileNodeIterator it = objectsNode.begin(); it != objectsNode.end(); ++it) {
+            objects.push_back(DetectedObject(*it));
+        }
+        return true;
     }
 };
 
@@ -190,6 +309,20 @@ public:
     }
 
 
+    /**
+     * Check if this object detector supports color images.
+     *
+     * \return true if detector works with color images, false otherwise.
+     */
+    virtual bool supportsColor() const {
+        for (std::list<ObjectDetector*>::const_iterator it = this->detectors.begin(); it != this->detectors.end(); ++it) {
+            if ((*it)->supportsColor()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /*
      * Execute object detector against given image.
      *
@@ -198,9 +331,21 @@ public:
      * \return true on success, false otherwise
      */
     virtual bool detect(const cv::Mat &source, std::list<DetectedObject> &objects) {
+        cv::Mat graySource(source);
+
         for (std::list<ObjectDetector*>::const_iterator it = this->detectors.begin(); it != this->detectors.end(); ++it) {
-            if (!(*it)->detect(source, objects)) {
-                return false;
+            if ((*it)->supportsColor()) {
+                if (!(*it)->detect(source, objects)) {
+                    return false;
+                }
+            } else {
+                if (graySource.channels() != 1) {
+                    cv::cvtColor(source, graySource, cv::COLOR_RGB2GRAY);
+                    // cv::equalizeHist(graySource, graySource);
+                }
+                if (!(*it)->detect(graySource, objects)) {
+                    return false;
+                }
             }
         }
         return true;

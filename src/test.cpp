@@ -48,7 +48,8 @@
 #include <vector>
 
 #include <opencv2/opencv.hpp>
-#include <opencv2/highgui/highgui.hpp>
+
+#include "detectors/detector.hpp"
 
 
 /*
@@ -71,7 +72,7 @@ static struct option options[] = {
  *
  */
 void usage() {
-    printf("yafdb-test input-image.tiff mask-image.tiff input-objects.txt\n\n");
+    printf("yafdb-test input-image.tiff mask-image.tiff input-objects.yml\n\n");
 
     printf("Compute the detection error rate by comparing optimal area given in\n");
     printf("reference bitmap mask (black=none, white=object) to the detected area\n");
@@ -134,7 +135,15 @@ int main(int argc, char **argv) {
         return 2;
     }
 
-    // TODO: read detected objects
+    // read detected objects
+    std::list<DetectedObject> objects;
+
+    if (!ObjectDetector::load(objects_file, objects)) {
+        fprintf(stderr, "Error: cannot read objects in file: %s\n", objects_file);
+        return 2;
+    }
+
+    // TODO: compute detected mask
 
     // TODO: compute error rate
     return 0;

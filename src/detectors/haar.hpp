@@ -88,6 +88,15 @@ public:
     }
 
 
+    /**
+     * Check if this object detector supports color images.
+     *
+     * \return true if detector works with color images, false otherwise.
+     */
+    virtual bool supportsColors() const {
+        return false;
+    }
+
     /*
      * Execute object detector against given image.
      *
@@ -96,14 +105,9 @@ public:
      * \return true on success, false otherwise
      */
     virtual bool detect(const cv::Mat &source, std::list<DetectedObject> &objects) {
-        cv::Mat graySource;
         std::vector<cv::Rect> window_objects;
 
-        // TODO: do this only once before processing
-        cv::cvtColor(source, graySource, cv::COLOR_RGB2GRAY);
-        cv::equalizeHist(graySource, graySource);
-
-        this->classifier.detectMultiScale(graySource, window_objects, this->scaleFactor, this->minOverlap, 0, cv::Size(10, 10), cv::Size());
+        this->classifier.detectMultiScale(source, window_objects, this->scaleFactor, this->minOverlap, 0, cv::Size(10, 10), cv::Size());
         for (std::vector<cv::Rect>::const_iterator it = window_objects.begin(); it != window_objects.end(); ++it) {
             objects.push_back(DetectedObject(this->className, *it));
         }

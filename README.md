@@ -31,9 +31,9 @@ cascades.
 
 ## Usage: object detection
 
-	yafdb-detect --algorithm algo input-image.tiff output-objects.txt
+	yafdb-detect --algorithm algo input-image.tiff output-objects.yml
 
-	Detects objects within input image. Detected objects are written to a text file.
+	Detects objects within input image. Detected objects are written to a yml file.
 
 	General options:
 
@@ -53,9 +53,16 @@ cascades.
 	--haar-min-overlap 5: haar minimum detection overlap
 
 
+## Usage: object preview
+
+	yafdb-preview input-image.tiff input-objects.yml
+
+	Preview detected objects in source image.
+
+
 ## Usage: object blurring
 
-	yafdb-blur --algorithm algo input-image.tiff input-objects.txt output-image.tiff
+	yafdb-blur --algorithm algo input-image.tiff input-objects.yml output-image.tiff
 
 	Blurs detected objects and write modified image as output.
 
@@ -66,11 +73,10 @@ cascades.
 
 ## Usage: performance validation
 
-	yafdb-test input-image.tiff mask-image.tiff input-objects.txt
+	yafdb-test input-image.tiff mask-image.tiff input-objects.yml
 
 	Compute the detection error rate by comparing optimal area given in
 	reference bitmap mask (black=none, white=object) to the detected area
-	given in input text file.
 
 
 =

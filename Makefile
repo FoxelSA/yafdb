@@ -3,11 +3,12 @@ INCLUDES := $(realpath include/)
 INCLUDES += $(realpath libgnomonic/src/)
 
 # Sources
-SHARED_SOURCES := $(realpath $(filter-out src/blur.cpp src/detect.cpp src/test.cpp, $(wildcard src/*.c src/*.cpp)))
+SHARED_SOURCES := $(realpath $(filter-out src/blur.cpp src/detect.cpp src/preview.cpp src/test.cpp, $(wildcard src/*.c src/*.cpp)))
 LIBGNOMONIC_SOURCES := $(realpath $(wildcard libgnomonic/src/*.c libgnomonic/src/*.cpp))
 
 DETECT_SOURCES := $(realpath src/detect.cpp)
 BLUR_SOURCES := $(realpath src/blur.cpp)
+PREVIEW_SOURCES := $(realpath src/preview.cpp)
 TEST_SOURCES := $(realpath src/test.cpp)
 
 # Objects
@@ -16,6 +17,7 @@ LIBGNOMONIC_OBJECTS := $(addsuffix .o, $(basename $(LIBGNOMONIC_SOURCES)))
 
 DETECT_OBJECTS := $(addsuffix .o, $(basename $(DETECT_SOURCES)))
 BLUR_OBJECTS := $(addsuffix .o, $(basename $(BLUR_SOURCES)))
+PREVIEW_OBJECTS := $(addsuffix .o, $(basename $(PREVIEW_SOURCES)))
 TEST_OBJECTS := $(addsuffix .o, $(basename $(TEST_SOURCES)))
 
 # Compilation flags
@@ -47,6 +49,10 @@ yafdb-detect: $(SHARED_OBJECTS) $(LIBGNOMONIC_OBJECTS) $(DETECT_OBJECTS)
 	@$(LINK.o) $(RELEASEFLAGS) -o $@ $^
 
 yafdb-blur: $(SHARED_OBJECTS) $(BLUR_OBJECTS)
+	@echo "linking $(subst $(BASE_DIR),,$@)..."
+	@$(LINK.o) $(RELEASEFLAGS) -o $@ $^
+
+yafdb-preview: $(SHARED_OBJECTS) $(PREVIEW_OBJECTS)
 	@echo "linking $(subst $(BASE_DIR),,$@)..."
 	@$(LINK.o) $(RELEASEFLAGS) -o $@ $^
 

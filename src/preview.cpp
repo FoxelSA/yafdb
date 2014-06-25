@@ -48,18 +48,9 @@
 #include <vector>
 
 #include <opencv2/opencv.hpp>
-// #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 #include "detectors/detector.hpp"
-
-
-/*
- * List of supported algorithms.
- *
- */
-
-#define ALGORITHM_NONE      0
-#define ALGORITHM_DEFAULT   1
 
 
 /*
@@ -67,17 +58,11 @@
  *
  */
 
-#define OPTION_ALGORITHM              0
-
-
-static int algorithm = ALGORITHM_DEFAULT;
 static const char *source_file = NULL;
 static const char *objects_file = NULL;
-static const char *target_file = NULL;
 
 
 static struct option options[] = {
-    {"algorithm",           required_argument, 0,                 'a'},
     {0, 0, 0, 0}
 };
 
@@ -87,13 +72,9 @@ static struct option options[] = {
  *
  */
 void usage() {
-    printf("yafdb-blur --algorithm algo input-image.tiff input-objects.yml output-image.tiff\n\n");
+    printf("yafdb-preview input-image.tiff input-objects.yml\n\n");
 
-    printf("Blurs detected objects and write modified image as output.\n\n");
-
-    printf("General options:\n\n");
-    printf("--algorithm algo: algorithm to use for blurring ('default')\n");
-    printf("\n");
+    printf("Preview detected objects in source image.\n\n");
 }
 
 
@@ -108,7 +89,7 @@ int main(int argc, char **argv) {
 
         getopt_long(argc, argv, "", options, &index);
         if (index == -1) {
-            if (argc != optind + 3) {
+            if (argc != optind + 2) {
                 usage();
                 return 1;
             }
@@ -123,30 +104,11 @@ int main(int argc, char **argv) {
                 fprintf(stderr, "Error: detected objects file not readable: %s\n", objects_file);
                 return 2;
             }
-
-            target_file = argv[optind++];
-            if (access(target_file, W_OK) && errno == EACCES) {
-                fprintf(stderr, "Error: target file not writable: %s\n", target_file);
-                return 2;
-            }
             break;
         }
 
-        switch (index) {
-        case OPTION_ALGORITHM:
-            if (strcmp(optarg, "none") == 0) {
-                algorithm = ALGORITHM_NONE;
-            } else if (strcmp(optarg, "default") == 0) {
-                algorithm = ALGORITHM_DEFAULT;
-            } else {
-                fprintf(stderr, "Error: unsupported algorithm: %s\n", optarg);
-            }
-            break;
-
-        default:
-            usage();
-            return 1;
-        }
+        usage();
+        return 1;
     }
 
     // read source file
@@ -165,14 +127,15 @@ int main(int argc, char **argv) {
         return 2;
     }
 
-    // apply blur operation
+    // preview detected objects
     for (std::list<DetectedObject>::const_iterator it = objects.begin(); it != objects.end(); ++it) {
-        cv::Mat region(source, (*it).area.eqrRect(source.cols, source.rows));
+        const cv::Rect rect = (*it).area.eqrRect(source.cols, source.rows);
 
-        GaussianBlur(region, region, cv::Size(65, 65), 0, 0);
+        putText(source, (*it).className, rect.tl(), CV_FONT_HERSHEY_SIMPLEX, 3, cv::Scalar(255, 255, 255), 3);
+        rectangle(source, rect, cv::Scalar(0, 255, 255), 2);
     }
-
-    // save target file
-    cv::imwrite(target_file, source);
+    cv::namedWindow("preview", CV_WINDOW_NORMAL);
+    cv::imshow("preview", source);
+    while (cv::waitKey(0) != '\n');
     return 0;
 }

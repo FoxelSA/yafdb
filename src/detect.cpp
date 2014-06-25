@@ -48,8 +48,8 @@
 #include <vector>
 
 #include <opencv2/opencv.hpp>
-#include <opencv2/highgui/highgui.hpp>
 
+#include "detectors/detector.hpp"
 #include "detectors/gnomonic.hpp"
 #include "detectors/haar.hpp"
 
@@ -125,9 +125,9 @@ static struct haar_model haar_model_parse(const std::string &value) {
  *
  */
 void usage() {
-    printf("yafdb-detect --algorithm algo input-image.tiff output-objects.txt\n\n");
+    printf("yafdb-detect --algorithm algo input-image.tiff output-objects.yml\n\n");
 
-    printf("Detects objects within input image. Detected objects are written to a text file.\n\n");
+    printf("Detects objects within input image. Detected objects are written to a yml file.\n\n");
 
     printf("General options:\n\n");
     printf("--algorithm algo: algorithm to use for object detection ('haar')\n");
@@ -196,11 +196,11 @@ int main(int argc, char **argv) {
             break;
 
         case OPTION_GNOMONIC_APERTURE_X:
-            gnomonic_aperture_x = atof(optarg);
+            gnomonic_aperture_x = atof(optarg) / 180.0 * M_PI;
             break;
 
         case OPTION_GNOMONIC_APERTURE_Y:
-            gnomonic_aperture_y = atof(optarg);
+            gnomonic_aperture_y = atof(optarg) / 180.0 * M_PI;
             break;
 
         case OPTION_HAAR_MODEL: {
@@ -236,7 +236,7 @@ int main(int argc, char **argv) {
         return 2;
     }
 
-    // instantiate detector
+    // instantiate detector(s)
     ObjectDetector *detector;
 
     switch (algorithm) {
@@ -268,21 +268,55 @@ int main(int argc, char **argv) {
     bool success = false;
 
     if (detector != NULL) {
-        // display source file
-        // detector->preview(source);
-
         // run detection algorithm
         std::list<DetectedObject> objects;
 
-        if (detector->detect(source, objects)) {
-            success = true;
+        if (source.channels() == 1 || detector->supportsColor()) {
+            success = detector->detect(source, objects);
+        } else {
+            cv::Mat graySource;
 
-            // TODO: save detected objects
-
-            // display detected objects
-            detector->preview(source, objects);
+            cv::cvtColor(source, graySource, cv::COLOR_RGB2GRAY);
+            // cv::equalizeHist(graySource, graySource);
+            success = detector->detect(graySource, objects);
         }
 
+        // save detected objects
+        cv::FileStorage fs(objects_file, cv::FileStorage::WRITE);
+
+        switch (algorithm) {
+        case ALGORITHM_NONE:
+            fs << "algorithm" << "none";
+            break;
+
+        case ALGORITHM_HAAR:
+            fs << "algorithm" << "haar";
+            {
+                fs << "haar" << "{";
+
+                fs << "scale" << haar_scale;
+                fs << "min_overlap" << haar_min_overlap;
+                fs << "models" << "[";
+                for (std::vector<struct haar_model>::const_iterator it = haar_models.begin(); it != haar_models.end(); ++it) {
+                    fs << "{:" << "className" << (*it).className << "model" << (*it).file << "}";
+                }
+                fs << "]";
+
+                fs << "}";
+            }
+            break;
+        }
+        if (gnomonic_enabled) {
+            fs << "gnomonic" << "{:" << "width" << gnomonic_width << "aperture_x" << gnomonic_aperture_x << "aperture_y" << gnomonic_aperture_y << "}";
+        }
+        fs << "source" << source_file;
+        fs << "objects" << "[";
+        for (std::list<DetectedObject>::const_iterator it = objects.begin(); it != objects.end(); ++it) {
+            (*it).write(fs);
+        }
+        fs << "]";
+
+        // free detector(s)
         delete detector;
         detector = NULL;
     }
