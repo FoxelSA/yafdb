@@ -7,6 +7,7 @@ a blurred version of the input panoramic image.
 
 It also contains a tool to evaluate the performance of a given object detection algorithm / model.
 
+
 ### Implemented algorithms
 
 * Vanilla haar cascades: by using a gnomonic projection window from the eqr image, the default face detection
@@ -21,12 +22,14 @@ poles to achieve detection in 3 passes (north, center, south).
 trained non-linear svm model. This should improve detection accuracy directly within eqr compared to haar
 cascades.
 
+
 ### Compilation
 
     git submodule init
     git submodule update
     make clean
     make
+
 
 ### Usage
 
@@ -53,11 +56,13 @@ cascades.
     --haar-scale 1.1: haar reduction scale factor
     --haar-min-overlap 5: haar minimum detection overlap
 
+
 #### Object preview
 
     yafdb-preview input-image.tiff input-objects.yml
 
     Preview detected objects in source image.
+
 
 #### Object blurring
 
@@ -73,6 +78,7 @@ cascades.
 
     --gaussian-kernel 65: gaussian kernel size
 
+
 #### Performance validation
 
     yafdb-test input-objects.yml mask-image.png
@@ -85,12 +91,14 @@ cascades.
 
     --preview input-image.tiff: preview detection errors
 
+
 ### Copyright
 
 Copyright (c) 2014 FOXEL SA - [http://foxel.ch](http://foxel.ch)<br />
 This program is part of the FOXEL project <[http://foxel.ch](http://foxel.ch)>.
 
 Please read the [COPYRIGHT.md](COPYRIGHT.md) file for more information.
+
 
 ### License
 
