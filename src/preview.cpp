@@ -44,13 +44,6 @@
 #include <errno.h>
 #include <getopt.h>
 
-#include <string>
-#include <list>
-#include <vector>
-
-#include <opencv2/opencv.hpp>
-#include <opencv2/highgui/highgui.hpp>
-
 #include "detectors/detector.hpp"
 
 
@@ -128,12 +121,19 @@ int main(int argc, char **argv) {
         return 2;
     }
 
-    // preview detected objects
-    for (std::list<DetectedObject>::const_iterator it = objects.begin(); it != objects.end(); ++it) {
-        const cv::Rect rect = (*it).area.eqrRect(source.cols, source.rows);
+    // merge detected objects
+    std::list<DetectedObject> mergedObjects;
 
-        putText(source, (*it).className, rect.tl(), CV_FONT_HERSHEY_SIMPLEX, 3, cv::Scalar(255, 255, 255), 3);
-        rectangle(source, rect, cv::Scalar(0, 255, 255), 2);
+    ObjectDetector::merge(objects, mergedObjects);
+
+    // preview detected objects
+    for (std::list<DetectedObject>::const_iterator it = mergedObjects.begin(); it != mergedObjects.end(); ++it) {
+        std::vector<cv::Rect> rects = (*it).area.eqrRects(source.cols, source.rows);
+
+        for (std::vector<cv::Rect>::const_iterator it2 = rects.begin(); it2 != rects.end(); ++it2) {
+            putText(source, (*it).className, (*it2).tl(), CV_FONT_HERSHEY_SIMPLEX, 3, cv::Scalar(255, 255, 255), 3);
+            rectangle(source, *it2, cv::Scalar(0, 255, 255), 3);
+        }
     }
     cv::namedWindow("preview", CV_WINDOW_NORMAL);
     cv::imshow("preview", source);

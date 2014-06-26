@@ -67,14 +67,23 @@ cascades.
 
     General options:
 
-    --algorithm algo: algorithm to use for blurring ('default')
+    --algorithm algo: algorithm to use for blurring ('gaussian')
+
+    Gaussian options:
+
+    --gaussian-kernel 65: gaussian kernel size
 
 #### Performance validation
 
-    yafdb-test input-image.tiff mask-image.tiff input-objects.yml
+    yafdb-test input-objects.yml mask-image.png
 
     Compute the detection error rate by comparing optimal area given in
     reference bitmap mask (black=none, white=object) to the detected area
+    given in input text file.
+
+    General options:
+
+    --preview input-image.tiff: preview detection errors
 
 ### Copyright
 

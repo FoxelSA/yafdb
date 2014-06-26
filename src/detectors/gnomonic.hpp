@@ -41,12 +41,9 @@
 #define __YAFDB_DETECTORS_GNOMONIC_H_INCLUDE__
 
 
-#include <gnomonic-all.h>
-
 #include "detector.hpp"
 
-
-// #define PREVIEW_SIZE 256
+#include <gnomonic-all.h>
 
 
 /**
@@ -123,17 +120,19 @@ public:
         cv::Mat window(this->height, this->width, source.type());
         double tax = tan(this->hax);
         double tay = tan(this->hay);
+        // const int PREVIEW_SIZE = 256;
+        // cv::Mat preview(source);
         // cv::Mat windows(
-        //     PREVIEW_SIZE * (((M_PI - this->ay) / this->hay) + 1),
-        //     PREVIEW_SIZE * (((2 * M_PI - this->ax) / this->hax) + 1),
+        //     PREVIEW_SIZE * ((M_PI / this->hay) + 1),
+        //     PREVIEW_SIZE * ((2 * M_PI / this->hax) + 1),
         //     source.type()
         // );
         // int ix = 0, iy = 0;
 
         // scan the whole source image in eqr projection
-        for (double y = M_PI / 2 - this->hay; y >= -M_PI / 2 + this->hay; y -= this->hay) {
+        for (double y = M_PI / 2; y >= -M_PI / 2; y -= this->hay) {
             // ix = 0;
-            for (double x = this->hax; x <= 2 * M_PI - this->hax; x += this->hax) {
+            for (double x = 0; x <= 2 * M_PI; x += this->hax) {
                 // gnomonic projection of current area
                 gnomonic_etg(
                     source.data,
@@ -184,19 +183,39 @@ public:
                     if (y < 0) {
                         eqr_phi = 2.0 * M_PI - eqr_phi;
                     }
-                    eqr_theta = -asin(z);
+                    eqr_theta = asin(z);
                 };
 
                 for (std::list<DetectedObject>::const_iterator it = window_objects.begin(); it != window_objects.end(); ++it) {
+                    // map bounding box to eqr coordinates
                     const BoundingBox &gnomonicArea = (*it).area;
                     BoundingBox eqrArea;
 
                     eqrCoordinateMapper(gnomonicArea.p1[0], gnomonicArea.p1[1], eqrArea.p1[0], eqrArea.p1[1]);
                     eqrCoordinateMapper(gnomonicArea.p2[0], gnomonicArea.p2[1], eqrArea.p2[0], eqrArea.p2[1]);
 
+                    // swap bounding box coordinates if necessary
+                    if (eqrArea.p1[0] > eqrArea.p2[0] && (2 * M_PI - eqrArea.p1[0] + eqrArea.p2[0]) > this->ax) {
+                        double tmp = eqrArea.p1[0];
+
+                        eqrArea.p1[0] = eqrArea.p2[0];
+                        eqrArea.p2[0] = tmp;
+                    }
+                    if (eqrArea.p1[1] > eqrArea.p2[1] && (M_PI - eqrArea.p1[1] + eqrArea.p2[1]) > this->ay) {
+                        double tmp = eqrArea.p1[1];
+
+                        eqrArea.p1[1] = eqrArea.p2[1];
+                        eqrArea.p2[1] = tmp;
+                    }
+
                     objects.push_back(DetectedObject((*it).className, eqrArea));
 
+                    // std::vector<cv::Rect> rects = eqrArea.eqrRects(preview.cols, preview.rows);
+
                     // rectangle(window, gnomonicArea.rect(), cv::Scalar(0, 255, 255), 4);
+                    // for (std::vector<cv::Rect>::const_iterator it2 = rects.begin(); it2 != rects.end(); ++it2) {
+                    //     rectangle(preview, *it2, cv::Scalar(0, 255, 255), 4);
+                    // }
                 }
 
                 // cv::Mat region(
@@ -208,6 +227,8 @@ public:
                 // cv::resize(window, region, region.size());
                 // cv::namedWindow("gnomonic", CV_WINDOW_NORMAL);
                 // cv::imshow("gnomonic", windows);
+                // cv::namedWindow("preview", CV_WINDOW_NORMAL);
+                // cv::imshow("preview", preview);
                 // cv::waitKey(10);
                 // ix++;
             }

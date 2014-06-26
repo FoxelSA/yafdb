@@ -44,12 +44,6 @@
 #include <errno.h>
 #include <getopt.h>
 
-#include <string>
-#include <list>
-#include <vector>
-
-#include <opencv2/opencv.hpp>
-
 #include "detectors/detector.hpp"
 
 
@@ -58,12 +52,14 @@
  *
  */
 
-static const char *source_file = NULL;
-static const char *mask_file = NULL;
-static const char *objects_file = NULL;
+#define OPTION_PREVIEW              0
 
+static const char *source_file = NULL;
+static const char *objects_file = NULL;
+static const char *mask_file = NULL;
 
 static struct option options[] = {
+    {"preview",         required_argument,       0, 0},
     {0, 0, 0, 0}
 };
 
@@ -73,11 +69,15 @@ static struct option options[] = {
  *
  */
 void usage() {
-    printf("yafdb-test input-image.tiff mask-image.tiff input-objects.yml\n\n");
+    printf("yafdb-test input-objects.yml mask-image.png\n\n");
 
     printf("Compute the detection error rate by comparing optimal area given in\n");
     printf("reference bitmap mask (black=none, white=object) to the detected area\n");
     printf("given in input text file.\n\n");
+
+    printf("General options:\n\n");
+    printf("--preview input-image.tiff: preview detection errors\n");
+    printf("\n");
 }
 
 
@@ -92,13 +92,14 @@ int main(int argc, char **argv) {
 
         getopt_long(argc, argv, "", options, &index);
         if (index == -1) {
-            if (argc != optind + 3) {
+            if (argc != optind + 2) {
                 usage();
                 return 1;
             }
-            source_file = argv[optind++];
-            if (access(source_file, R_OK)) {
-                fprintf(stderr, "Error: source file not readable: %s\n", source_file);
+
+            objects_file = argv[optind++];
+            if (access(objects_file, R_OK)) {
+                fprintf(stderr, "Error: detected objects file not readable: %s\n", objects_file);
                 return 2;
             }
 
@@ -107,33 +108,36 @@ int main(int argc, char **argv) {
                 fprintf(stderr, "Error: mask file not readable: %s\n", mask_file);
                 return 2;
             }
-
-            objects_file = argv[optind++];
-            if (access(objects_file, R_OK)) {
-                fprintf(stderr, "Error: detected objects file not readable: %s\n", objects_file);
-                return 2;
-            }
             break;
         }
 
-        usage();
-        return 1;
-    }
+        switch (index) {
+        case OPTION_PREVIEW:
+            if (access(optarg, R_OK)) {
+                fprintf(stderr, "Error: source file not readable: %s\n", optarg);
+                return 2;
+            }
+            source_file = optarg;
+            break;
 
-    // read source file
-    cv::Mat source = cv::imread(source_file);
-
-    if (source.rows <= 0 || source.cols <= 0) {
-        fprintf(stderr, "Error: cannot read image in source file: %s\n", source_file);
-        return 2;
+        default:
+            usage();
+            return 1;
+        }
     }
 
     // read mask file
     cv::Mat mask = cv::imread(mask_file);
 
-    if (mask.rows != source.rows || mask.cols != source.cols) {
-        fprintf(stderr, "Error: cannot read image in mask file or mask is incompatible: %s\n", mask_file);
+    if (mask.rows <= 0 || mask.cols <= 0) {
+        fprintf(stderr, "Error: cannot read image in mask file: %s\n", mask_file);
         return 2;
+    }
+    if (mask.channels() != 1) {
+        cv::Mat tmp;
+
+        cv::cvtColor(mask, tmp, cv::COLOR_RGB2GRAY);
+        mask = tmp;
     }
 
     // read detected objects
@@ -144,8 +148,66 @@ int main(int argc, char **argv) {
         return 2;
     }
 
-    // TODO: compute detected mask
+    // compute detected mask
+    cv::Mat detected(mask.rows, mask.cols, CV_8UC1, cv::Scalar(0));
 
-    // TODO: compute error rate
+    for (std::list<DetectedObject>::const_iterator it = objects.begin(); it != objects.end(); ++it) {
+        std::vector<cv::Rect> rects = (*it).area.eqrRects(mask.cols, mask.rows);
+
+        for (std::vector<cv::Rect>::const_iterator it2 = rects.begin(); it2 != rects.end(); ++it2) {
+            rectangle(detected, *it2, cv::Scalar(255), CV_FILLED);
+        }
+    }
+
+    // compute false positive mask (type I error)
+    cv::Mat falsePositives(mask.rows, mask.cols, CV_8UC1);
+
+    compare(detected, mask, falsePositives, cv::CMP_GT);
+
+    // compute false negative mask (type II error)
+    cv::Mat falseNegatives(mask.rows, mask.cols, CV_8UC1);
+
+    compare(detected, mask, falseNegatives, cv::CMP_LT);
+
+    // report error rates
+    double totalPixels = mask.cols * mask.rows;
+    double positivePixels = sum(mask)[0] / 255.0;
+    double falsePositivesRate = (sum(falsePositives)[0] / 255.0) / (totalPixels - positivePixels);
+    double falseNegativesRate = (sum(falseNegatives)[0] / 255.0) / positivePixels;
+
+    printf("falsePositivesRatio: %.03f %%\n", falsePositivesRate * 100.0);
+    printf("falseNegativesRatio: %.03f %%\n", falseNegativesRate * 100.0);
+
+    // preview errors
+    if (source_file != NULL) {
+        // compute correct mask
+        cv::Mat correctMask(mask.rows, mask.cols, CV_8UC1);
+
+        multiply(detected, mask, correctMask);
+
+        // errors overlay
+        cv::Mat colors(mask.rows, mask.cols, CV_8UC3, cv::Scalar(0, 0, 0));
+
+        colors.setTo(cv::Scalar(0, 255.0, 0), correctMask);
+        colors.setTo(cv::Scalar(0, 0, 255.0), falsePositives);
+        colors.setTo(cv::Scalar(255.0, 0, 0), falseNegatives);
+
+        correctMask.release();
+        falsePositives.release();
+        falseNegatives.release();
+
+        // read source file
+        cv::Mat source = cv::imread(source_file);
+
+        if (source.rows != mask.rows || source.cols != mask.cols) {
+            fprintf(stderr, "Error: cannot read image in source file or incompatible with mask size: %s\n", source_file);
+            return 2;
+        }
+
+        // display errors
+        cv::namedWindow("preview", CV_WINDOW_NORMAL);
+        cv::imshow("preview", 0.5 * source + colors);
+        while (cv::waitKey(0) != '\n');
+    }
     return 0;
 }

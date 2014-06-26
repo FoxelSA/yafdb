@@ -44,12 +44,6 @@
 #include <errno.h>
 #include <getopt.h>
 
-#include <string>
-#include <list>
-#include <vector>
-
-#include <opencv2/opencv.hpp>
-
 #include "detectors/detector.hpp"
 #include "detectors/gnomonic.hpp"
 #include "detectors/haar.hpp"
@@ -274,11 +268,14 @@ int main(int argc, char **argv) {
 
         if (source.channels() == 1 || detector->supportsColor()) {
             success = detector->detect(source, objects);
+            source.release();
         } else {
             cv::Mat graySource;
 
             cv::cvtColor(source, graySource, cv::COLOR_RGB2GRAY);
             // cv::equalizeHist(graySource, graySource);
+            source.release();
+
             success = detector->detect(graySource, objects);
         }
 

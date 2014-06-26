@@ -41,6 +41,14 @@
 #define __YAFDB_DETECTORS_DETECTOR_H_INCLUDE__
 
 
+#include <bitset>
+#include <list>
+#include <string>
+#include <vector>
+
+#include <opencv2/opencv.hpp>
+
+
 /**
  * A generic bounding box.
  *
@@ -118,6 +126,89 @@ public:
 
 
     /**
+     * Check if other bounding box overlap, and if yes, merge other area
+     * into this one.
+     *
+     * \param other other bounding box
+     * \return true if overlap detected, false otherwise
+     */
+    bool mergeIfOverlap(const BoundingBox &other) {
+        double ax1 = this->p1[0];
+        double bx1 = other.p1[0];
+        double ay1 = this->p1[1];
+        double by1 = other.p1[1];
+        double ax2 = this->p2[0];
+        double bx2 = other.p2[0];
+        double ay2 = this->p2[1];
+        double by2 = other.p2[1];
+        double maxx = ax1;
+        double maxy = ay1;
+
+        if (maxx < bx1) {
+            maxx = bx1;
+        }
+        if (maxx < ax2) {
+            maxx = ax2;
+        }
+        if (maxx < bx2) {
+            maxx = bx2;
+        }
+        if (maxy < by1) {
+            maxy = by1;
+        }
+        if (maxy < ay2) {
+            maxy = ay2;
+        }
+        if (maxy < by2) {
+            maxy = by2;
+        }
+
+        if (this->p1[0] > this->p2[0]) {
+            ax2 += maxx;
+        }
+        if (other.p1[0] > other.p2[0]) {
+            bx2 += maxx;
+        }
+        if (this->p1[1] > this->p2[1]) {
+            ay2 += maxy;
+        }
+        if (other.p1[1] > other.p2[1]) {
+            by2 += maxy;
+        }
+
+        if (ax1 > bx2 || ax2 < bx1 ||
+            ay1 > by2 || ay2 < by1) {
+            return false;
+        }
+        if (ax1 > bx1) {
+            ax1 = bx1;
+        }
+        if (ay1 > by1) {
+            ay1 = by1;
+        }
+        if (ax2 < bx2) {
+            ax2 = bx2;
+        }
+        if (ay2 < by2) {
+            ay2 = by2;
+        }
+        this->p1[0] = ax1;
+        this->p1[1] = ay1;
+        if (this->p1[0] > this->p2[0]) {
+            this->p2[0] = ax2 - maxx;
+        } else {
+            this->p2[0] = ax2;
+        }
+        if (this->p1[1] > this->p2[1]) {
+            this->p2[1] = ay2 - maxy;
+        } else {
+            this->p2[1] = ay2;
+        }
+        return true;
+    }
+
+
+    /**
      * Convert bounding box to opencv rectangle.
      *
      * \return opencv rectangle
@@ -135,15 +226,32 @@ public:
      * Convert bounding box to opencv rectangle assuming bounding box is given
      * in spherical coordinates.
      *
-     * \return opencv rectangle
+     * \return opencv rectangle(s)
      */
-    cv::Rect eqrRect(int width, int height) const {
+    std::vector<cv::Rect> eqrRects(int width, int height) const {
+        std::vector<cv::Rect> v;
         int x1 = (int)(this->p1[0] / (2 * M_PI) * (width - 1));
-        int y1 = (int)((-this->p1[1] + M_PI / 2) / M_PI * (height - 1));
+        int y1 = (int)((this->p1[1] + M_PI / 2) / M_PI * (height - 1));
         int x2 = (int)(this->p2[0] / (2 * M_PI) * (width - 1));
-        int y2 = (int)((-this->p2[1] + M_PI / 2) / M_PI * (height - 1));
+        int y2 = (int)((this->p2[1] + M_PI / 2) / M_PI * (height - 1));
 
-        return cv::Rect(x1, y1, x2 - x1, y2 - y1);
+        if (x1 > x2) {
+            if (y1 > y2) {
+                v.push_back(cv::Rect(x1, y1, width - x1, height - y2));
+                v.push_back(cv::Rect(x1,  0, width - x1,      y2 + 1));
+                v.push_back(cv::Rect(0,  y1,     x2 + 1, height - y2));
+                v.push_back(cv::Rect(0,   0,     x2 + 1,      y2 + 1));
+            } else {
+                v.push_back(cv::Rect(x1,  y1, width - x1, y2 - y1 + 1));
+                v.push_back(cv::Rect(0,   y1,     x2 + 1, y2 - y1 + 1));
+            }
+        } else if (y1 > y2) {
+            v.push_back(cv::Rect(x1, y1, x2 - x1 + 1, height - y1));
+            v.push_back(cv::Rect(x1,  0, x2 - x1 + 1,      y2 + 1));
+        } else {
+            v.push_back(cv::Rect(x1, y1, x2 - x1 + 1, y2 - y1 + 1));
+        }
+        return v;
     }
 };
 
@@ -265,6 +373,50 @@ public:
             objects.push_back(DetectedObject(*it));
         }
         return true;
+    }
+
+    /**
+     * Merge overlapping detected objects.
+     *
+     * \param objects detected objects
+     * \param result output list of merge objects
+     */
+    static void merge(const std::list<DetectedObject> &objects, std::list<DetectedObject> &result) {
+        std::vector<DetectedObject> v(objects.begin(), objects.end());
+        std::set<unsigned int> used;
+
+        for (unsigned int i = 0; i < v.size(); i++) {
+            if (used.find(i) != used.end()) {
+                continue;
+            }
+            used.insert(i);
+
+            BoundingBox area(v[i].area);
+            std::set<std::string> classNames;
+
+            classNames.insert(v[i].className);
+            for (unsigned int j = i + 1; j < v.size(); j++) {
+                if (used.find(j) != used.end()) {
+                    continue;
+                }
+                if (area.mergeIfOverlap(v[j].area)) {
+                    classNames.insert(v[j].className);
+                    used.insert(j);
+                    j = i;
+                }
+            }
+
+            std::string className;
+
+            for (auto it = classNames.begin(); it != classNames.end(); ++it) {
+                if (!className.empty()) {
+                    className.append(":");
+                }
+                className.append(*it);
+            }
+
+            result.push_back(DetectedObject(className, area));
+        }
     }
 };
 

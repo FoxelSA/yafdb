@@ -44,13 +44,6 @@
 #include <errno.h>
 #include <getopt.h>
 
-#include <string>
-#include <list>
-#include <vector>
-
-#include <opencv2/opencv.hpp>
-// #include <opencv2/highgui/highgui.hpp>
-
 #include "detectors/detector.hpp"
 
 
@@ -59,8 +52,8 @@
  *
  */
 
-#define ALGORITHM_NONE      0
-#define ALGORITHM_DEFAULT   1
+#define ALGORITHM_NONE       0
+#define ALGORITHM_GAUSSIAN   1
 
 
 /*
@@ -69,9 +62,11 @@
  */
 
 #define OPTION_ALGORITHM              0
+#define OPTION_GAUSSIAN_KERNEL        1
 
 
-static int algorithm = ALGORITHM_DEFAULT;
+static int algorithm = ALGORITHM_GAUSSIAN;
+static double gaussian_kernel_size = 65;
 static const char *source_file = NULL;
 static const char *objects_file = NULL;
 static const char *target_file = NULL;
@@ -79,6 +74,7 @@ static const char *target_file = NULL;
 
 static struct option options[] = {
     {"algorithm",           required_argument, 0,                 'a'},
+    {"gaussian-kernel",     required_argument, 0,                  0 },
     {0, 0, 0, 0}
 };
 
@@ -93,7 +89,11 @@ void usage() {
     printf("Blurs detected objects and write modified image as output.\n\n");
 
     printf("General options:\n\n");
-    printf("--algorithm algo: algorithm to use for blurring ('default')\n");
+    printf("--algorithm algo: algorithm to use for blurring ('gaussian')\n");
+    printf("\n");
+
+    printf("Gaussian options:\n\n");
+    printf("--gaussian-kernel 65: gaussian kernel size\n");
     printf("\n");
 }
 
@@ -137,11 +137,15 @@ int main(int argc, char **argv) {
         case OPTION_ALGORITHM:
             if (strcmp(optarg, "none") == 0) {
                 algorithm = ALGORITHM_NONE;
-            } else if (strcmp(optarg, "default") == 0) {
-                algorithm = ALGORITHM_DEFAULT;
+            } else if (strcmp(optarg, "gaussian") == 0) {
+                algorithm = ALGORITHM_GAUSSIAN;
             } else {
                 fprintf(stderr, "Error: unsupported algorithm: %s\n", optarg);
             }
+            break;
+
+        case OPTION_GAUSSIAN_KERNEL:
+            gaussian_kernel_size = atof(optarg);
             break;
 
         default:
@@ -166,11 +170,37 @@ int main(int argc, char **argv) {
         return 2;
     }
 
-    // apply blur operation
-    for (std::list<DetectedObject>::const_iterator it = objects.begin(); it != objects.end(); ++it) {
-        cv::Mat region(source, (*it).area.eqrRect(source.cols, source.rows));
+    // merge detected objects
+    std::list<DetectedObject> mergedObjects;
 
-        GaussianBlur(region, region, cv::Size(65, 65), 0, 0);
+    ObjectDetector::merge(objects, mergedObjects);
+
+    // apply blur operation
+    for (std::list<DetectedObject>::const_iterator it = mergedObjects.begin(); it != mergedObjects.end(); ++it) {
+        std::vector<cv::Rect> rects = (*it).area.eqrRects(source.cols, source.rows);
+
+        for (std::vector<cv::Rect>::const_iterator it2 = rects.begin(); it2 != rects.end(); ++it2) {
+            cv::Mat region(source, *it2);
+
+            switch (algorithm) {
+            case ALGORITHM_NONE:
+                break;
+
+            case ALGORITHM_GAUSSIAN:
+                GaussianBlur(
+                    region,
+                    region,
+                    cv::Size(gaussian_kernel_size, gaussian_kernel_size),
+                    0,
+                    0
+                );
+                break;
+
+            default:
+                fprintf(stderr, "Error: unsupported blur algorithm!\n");
+                return 4;
+            }
+        }
     }
 
     // save target file
