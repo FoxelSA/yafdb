@@ -7,7 +7,7 @@
  *
  * Author(s):
  *
- * Antony Ducommun <nitro@tmsrv.org>
+ *      Antony Ducommun <nitro@tmsrv.org>
  *
  *
  * This file is part of the FOXEL project <http://foxel.ch>.
@@ -19,22 +19,23 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
  *
  * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *
  * Additional Terms:
  *
- * You are required to preserve legal notices and author attributions in
- * that material or in the Appropriate Legal Notices displayed by works
- * containing it.
+ *      You are required to preserve legal notices and author attributions in
+ *      that material or in the Appropriate Legal Notices displayed by works
+ *      containing it.
  *
- * You are required to attribute the work as explained in the "Usage and
- * Attribution" section of <http://foxel.ch/license>.
+ *      You are required to attribute the work as explained in the "Usage and
+ *      Attribution" section of <http://foxel.ch/license>.
  */
+
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -112,7 +113,7 @@ int main(int argc, char **argv) {
                 fprintf(stderr, "Error: detected objects file not readable: %s\n", objects_file);
                 return 2;
             }
-          	break;
+            break;
         }
 
         usage();
