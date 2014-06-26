@@ -1,7 +1,7 @@
 
 ## Copyright
 
-YAFDB - Yet Another Face Detection and Bluring<br />
+yafdb - Yet Another Face Detection and Bluring<br />
 This program is part of the FOXEL project <[http://foxel.ch](http://foxel.ch)>.
 
 Copyright (c) 2014 FOXEL SA - [http://foxel.ch](http://foxel.ch)<br />

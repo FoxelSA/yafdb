@@ -1,5 +1,5 @@
 
-## YAFDB<br />Yet Another Face Detection and Bluring
+## yafdb<br />Yet Another Face Detection and Bluring
 
 This project is a set of tools to detect objects in panoramic images and apply blur operation to them. It supports
 currently input images in EQR (equirectangular) projection and outputs coordinates of detected objects as well as
@@ -21,14 +21,12 @@ poles to achieve detection in 3 passes (north, center, south).
 trained non-linear svm model. This should improve detection accuracy directly within eqr compared to haar
 cascades.
 
-
 ### Compilation
 
     git submodule init
     git submodule update
     make clean
     make
-
 
 ### Usage
 
@@ -55,13 +53,11 @@ cascades.
     --haar-scale 1.1: haar reduction scale factor
     --haar-min-overlap 5: haar minimum detection overlap
 
-
 #### Object preview
 
     yafdb-preview input-image.tiff input-objects.yml
 
     Preview detected objects in source image.
-
 
 #### Object blurring
 
@@ -72,7 +68,6 @@ cascades.
     General options:
 
     --algorithm algo: algorithm to use for blurring ('default')
-
 
 #### Performance validation
 
