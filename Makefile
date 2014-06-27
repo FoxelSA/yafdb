@@ -23,11 +23,12 @@ TEST_OBJECTS := $(addsuffix .o, $(basename $(TEST_SOURCES)))
 # Compilation flags
 RELEASEFLAGS := -g -O0
 #RELEASEFLAGS := -O3
-CPPFLAGS += -c -pipe $(foreach dir, $(INCLUDES), -I$(dir))
-CFLAGS += -std=gnu99 -Wall -funsigned-char
-CXXFLAGS += -std=gnu++11 -Wall -funsigned-char
-LDFLAGS += -pipe -lstdc++ -lm -lopencv_core -lopencv_imgproc -lopencv_features2d -lopencv_objdetect \
-	-lopencv_highgui -lopencv_contrib
+CPPFLAGS += $(foreach dir, $(INCLUDES), -I$(dir))
+CFLAGS += -pipe -std=gnu99 -Wall -funsigned-char $(RELEASEFLAGS)
+CXXFLAGS += -pipe -std=gnu++11 -Wall -funsigned-char $(RELEASEFLAGS)
+LDFLAGS += -pipe
+LIBRARIES := -lopencv_core -lopencv_imgproc -lopencv_features2d -lopencv_objdetect \
+	-lopencv_highgui -lopencv_contrib -lpthread -lm -lstdc++
 
 # System detection
 BASE_DIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))/
@@ -47,28 +48,28 @@ clean:
 
 yafdb-blur: $(SHARED_OBJECTS) $(BLUR_OBJECTS)
 	@echo "linking $(subst $(BASE_DIR),,$@)..."
-	@$(LINK.o) $(RELEASEFLAGS) -o $@ $^
+	@$(LINK.o) -o $@ $^ $(LIBRARIES)
 
 yafdb-detect: $(SHARED_OBJECTS) $(LIBGNOMONIC_OBJECTS) $(DETECT_OBJECTS)
 	@echo "linking $(subst $(BASE_DIR),,$@)..."
-	@$(LINK.o) $(RELEASEFLAGS) -o $@ $^
+	@$(LINK.o) -o $@ $^ $(LIBRARIES)
 
 yafdb-preview: $(SHARED_OBJECTS) $(PREVIEW_OBJECTS)
 	@echo "linking $(subst $(BASE_DIR),,$@)..."
-	@$(LINK.o) $(RELEASEFLAGS) -o $@ $^
+	@$(LINK.o) -o $@ $^ $(LIBRARIES)
 
 yafdb-test: $(SHARED_OBJECTS) $(TEST_OBJECTS)
 	@echo "linking $(subst $(BASE_DIR),,$@)..."
-	@$(LINK.o) $(RELEASEFLAGS) -o $@ $^
+	@$(LINK.o) -o $@ $^ $(LIBRARIES)
 
 
 %.o: %.c
 	@echo "compiling $(subst $(BASE_DIR),,$<)..."
-	@$(COMPILE.c) $(RELEASEFLAGS) -o $@ $<
+	@$(COMPILE.c) -o $@ $<
 
 %.o: %.cpp
 	@echo "compiling $(subst $(BASE_DIR),,$<)..."
-	@$(COMPILE.cpp) $(RELEASEFLAGS) -o $@ $<
+	@$(COMPILE.cpp) -o $@ $<
 
 
 .PHONY:	all clean
