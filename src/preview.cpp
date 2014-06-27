@@ -46,7 +46,6 @@
 
 #include "detectors/detector.hpp"
 
-
 /*
  * Program arguments.
  *
@@ -135,7 +134,7 @@ int main(int argc, char **argv) {
             rectangle(source, *it2, cv::Scalar(0, 255, 255), 3);
         }
     }
-    cv::namedWindow("preview", CV_WINDOW_NORMAL);
+    cv::namedWindow("preview", cv::WINDOW_NORMAL);
     cv::imshow("preview", source);
     while (cv::waitKey(0) != '\n');
     return 0;

@@ -205,7 +205,7 @@ int main(int argc, char **argv) {
         }
 
         // display errors
-        cv::namedWindow("preview", CV_WINDOW_NORMAL);
+        cv::namedWindow("preview", cv::WINDOW_NORMAL);
         cv::imshow("preview", 0.5 * source + colors);
         while (cv::waitKey(0) != '\n');
     }
