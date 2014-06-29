@@ -151,13 +151,13 @@ int main(int argc, char **argv) {
     // compute detected mask
     cv::Mat detected(mask.rows, mask.cols, CV_8UC1, cv::Scalar(0));
 
-    for (std::list<DetectedObject>::const_iterator it = objects.begin(); it != objects.end(); ++it) {
-        std::vector<cv::Rect> rects = (*it).area.eqrRects(mask.cols, mask.rows);
+    std::for_each(objects.begin(), objects.end(), [&] (const DetectedObject &object) {
+        auto rects = object.area.rects(mask.cols, mask.rows);
 
-        for (std::vector<cv::Rect>::const_iterator it2 = rects.begin(); it2 != rects.end(); ++it2) {
-            rectangle(detected, *it2, cv::Scalar(255), CV_FILLED);
-        }
-    }
+        std::for_each(rects.begin(), rects.end(), [&] (const cv::Rect &rect) {
+            rectangle(detected, rect, cv::Scalar(255), CV_FILLED);
+        });
+    });
 
     // compute false positive mask (type I error)
     cv::Mat falsePositives(mask.rows, mask.cols, CV_8UC1);

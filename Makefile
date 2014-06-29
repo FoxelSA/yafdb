@@ -21,8 +21,8 @@ PREVIEW_OBJECTS := $(addsuffix .o, $(basename $(PREVIEW_SOURCES)))
 TEST_OBJECTS := $(addsuffix .o, $(basename $(TEST_SOURCES)))
 
 # Compilation flags
-RELEASEFLAGS := -g -O0
-#RELEASEFLAGS := -O3
+#RELEASEFLAGS := -g -O0
+RELEASEFLAGS := -O3
 CPPFLAGS += $(foreach dir, $(INCLUDES), -I$(dir))
 CFLAGS += -pipe -std=gnu99 -Wall -funsigned-char $(RELEASEFLAGS)
 CXXFLAGS += -pipe -std=gnu++11 -Wall -funsigned-char $(RELEASEFLAGS)

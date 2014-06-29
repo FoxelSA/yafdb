@@ -45,6 +45,8 @@
 #include <getopt.h>
 
 #include "detectors/detector.hpp"
+#include "detectors/multi.hpp"
+#include "detectors/hierarchical.hpp"
 #include "detectors/gnomonic.hpp"
 #include "detectors/haar.hpp"
 
@@ -73,19 +75,16 @@
 #define OPTION_HAAR_MIN_OVERLAP       7
 
 
-struct haar_model {
-    std::string className;
-    std::string file;
-};
+class HaarModel;
 
 static int algorithm = ALGORITHM_HAAR;
 static int gnomonic_enabled = 0;
-static int gnomonic_width = 256;
-static double gnomonic_aperture_x = 30;
-static double gnomonic_aperture_y = 30;
-static std::vector<struct haar_model> haar_models;
+static int gnomonic_width = 2048;
+static double gnomonic_aperture_x = 60;
+static double gnomonic_aperture_y = 60;
+static std::map<std::string, HaarModel> haar_models;
 static double haar_scale = 1.1;
-static int haar_min_overlap = 5;
+static int haar_min_overlap = 3;
 static const char *source_file = NULL;
 static const char *objects_file = NULL;
 
@@ -103,16 +102,110 @@ static struct option options[] = {
 };
 
 
-static struct haar_model haar_model_parse(const std::string &value) {
-    std::string classModel(optarg);
-    int split = classModel.find_first_of(':');
-    struct haar_model model = {
-        split > 0 ? classModel.substr(0, split) : "",
-        classModel.substr(split + 1)
-    };
+class HaarModel {
+public:
+    std::string className;
+    std::string file;
+    int minOccurences;
+    int maxOccurences;
+    int minChildOccurences;
+    int maxChildOccurences;
+    std::map<std::string, HaarModel> children;
 
-    return model;
-}
+
+    HaarModel() : minOccurences(0), maxOccurences(-1), minChildOccurences(0), maxChildOccurences(-1) {
+    }
+
+    HaarModel(const HaarModel &ref) : className(ref.className), file(ref.file), minOccurences(ref.minOccurences), maxOccurences(ref.maxOccurences), minChildOccurences(ref.minChildOccurences), maxChildOccurences(ref.maxChildOccurences), children(ref.children) {
+    }
+
+
+    bool check() const {
+        if (access(this->file.c_str(), R_OK)) {
+            fprintf(stderr, "Error: haar model file not readable: %s (class: %s)\n", this->file.c_str(), this->className.c_str());
+            return false;
+        }
+        std::all_of(this->children.begin(), this->children.end(), [&] (const std::pair<std::string, HaarModel> &pair) {
+            return pair.second.check();
+        });
+        return true;
+    }
+
+    void write(cv::FileStorage &fs) const {
+        fs << "{";
+        fs << "className" << this->className;
+        fs << "model" << this->file;
+        fs << "minOccurences" << this->minOccurences;
+        fs << "maxOccurences" << this->maxOccurences;
+        fs << "minChildOccurences" << this->minChildOccurences;
+        fs << "maxChildOccurences" << this->maxChildOccurences;
+        if (!this->children.empty()) {
+            fs << "children" << "[";
+            std::for_each(this->children.begin(), this->children.end(), [&] (const std::pair<std::string, HaarModel> &pair) {
+                pair.second.write(fs);
+            });
+            fs << "]";
+        }
+        fs << "}";
+    }
+
+    std::shared_ptr<ObjectDetector> build() const {
+        std::shared_ptr<ObjectDetector> detector(
+            new HaarDetector(this->className, this->file, haar_scale, haar_min_overlap)
+        );
+
+        if (this->children.size() > 0) {
+            auto parentDetector = new HierarchicalObjectDetector(detector, this->minChildOccurences, this->maxChildOccurences);
+
+            std::for_each(this->children.begin(), this->children.end(), [&] (const std::pair<std::string, HaarModel> &pair) {
+                parentDetector->addChildDetector(
+                    pair.second.build(),
+                    pair.second.minOccurences,
+                    pair.second.maxOccurences
+                );
+            });
+            return std::shared_ptr<ObjectDetector>(parentDetector);
+        }
+        return detector;
+    }
+
+
+    static bool parse(const std::string &value) {
+        std::stringstream stream(value);
+        std::vector<std::string> items;
+
+        for (std::string item; std::getline(stream, item, ':'); ) {
+            items.push_back(item);
+        }
+        switch (items.size()) {
+        case 1:
+            haar_models["any"].className = "any";
+            haar_models["any"].file = items[0];
+            return true;
+        case 2:
+            haar_models[items[0]].className = items[0];
+            haar_models[items[0]].file = items[1];
+            return true;
+        case 3:
+            haar_models[items[2]].children[items[0]].className = items[0];
+            haar_models[items[2]].children[items[0]].file = items[1];
+            return true;
+        case 4:
+            haar_models[items[0]].className = items[0];
+            haar_models[items[0]].file = items[1];
+            haar_models[items[0]].minChildOccurences = atoi(items[2].c_str());
+            haar_models[items[0]].maxChildOccurences = atoi(items[3].c_str());
+            return true;
+        case 5:
+            haar_models[items[2]].children[items[0]].className = items[0];
+            haar_models[items[2]].children[items[0]].file = items[1];
+            haar_models[items[2]].children[items[0]].minOccurences = atoi(items[3].c_str());
+            haar_models[items[2]].children[items[0]].maxOccurences = atoi(items[4].c_str());
+            return true;
+        }
+        return false;
+    }
+};
 
 
 /**
@@ -125,20 +218,21 @@ void usage() {
     printf("Detects objects within input image. Detected objects are written to a yml file.\n\n");
 
     printf("General options:\n\n");
-    printf("--algorithm algo: algorithm to use for object detection ('haar')\n");
+    printf("--algorithm algo : algorithm to use for object detection ('haar')\n");
     printf("\n");
 
     printf("Gnomonic projection options:\n\n");
-    printf("--gnomonic: activate task\n");
-    printf("--gnomonic-width 256: projection window width\n");
-    printf("--gnomonic-aperture-x 30: horizontal projection aperture\n");
-    printf("--gnomonic-aperture-y 30: vertical projection aperture\n");
+    printf("--gnomonic : activate task\n");
+    printf("--gnomonic-width 2048 : projection window width\n");
+    printf("--gnomonic-aperture-x 60 : horizontal projection aperture\n");
+    printf("--gnomonic-aperture-y 60 : vertical projection aperture\n");
     printf("\n");
 
     printf("Haar-cascades options:\n\n");
-    printf("--haar-model class:file.xml: haar model file with class name (allowed multiple times)\n");
-    printf("--haar-scale 1.1: haar reduction scale factor\n");
-    printf("--haar-min-overlap 5: haar minimum detection overlap\n");
+    printf("--haar-model class:file.xml[:minChild:maxChild] : parent haar model file with class name (allowed multiple times)\n");
+    printf("--haar-model class:file.xml:parentclass[:min:max] : child haar model file with class name (allowed multiple times)\n");
+    printf("--haar-scale 1.1 : haar reduction scale factor\n");
+    printf("--haar-min-overlap 3 : haar minimum detection overlap\n");
     printf("\n");
 }
 
@@ -158,6 +252,13 @@ int main(int argc, char **argv) {
                 usage();
                 return 1;
             }
+
+            for (auto it = haar_models.begin(); it != haar_models.end(); ++it) {
+                if (!(*it).second.check()) {
+                    return 2;
+                }
+            }
+
             source_file = argv[optind++];
             if (access(source_file, R_OK)) {
                 fprintf(stderr, "Error: source file not readable: %s\n", source_file);
@@ -198,14 +299,10 @@ int main(int argc, char **argv) {
             gnomonic_aperture_y = atof(optarg) / 180.0 * M_PI;
             break;
 
-        case OPTION_HAAR_MODEL: {
-                struct haar_model model = haar_model_parse(optarg);
-
-                if (access(model.file.c_str(), R_OK)) {
-                    fprintf(stderr, "Error: haar model file not readable: %s\n", model.file.c_str());
-                    return 2;
-                }
-                haar_models.push_back(model);
+        case OPTION_HAAR_MODEL:
+            if (!HaarModel::parse(optarg)) {
+                fprintf(stderr, "Error: invalid haar model given: %s\n", optarg);
+                return 2;
             }
             break;
 
@@ -232,20 +329,21 @@ int main(int argc, char **argv) {
     }
 
     // instantiate detector(s)
-    ObjectDetector *detector;
+    std::shared_ptr<ObjectDetector> detector;
 
     switch (algorithm) {
     case ALGORITHM_NONE:
-        detector = new ObjectDetector();
+        detector.reset(new ObjectDetector());
         break;
 
-    case ALGORITHM_HAAR: {
-            MultiDetector *multiDetector = new MultiDetector();
+    case ALGORITHM_HAAR:
+        {
+            auto multiDetector = new MultiObjectDetector();
 
-            for (std::vector<struct haar_model>::const_iterator it = haar_models.begin(); it != haar_models.end(); ++it) {
-                multiDetector->addDetector(new HaarDetector((*it).className, (*it).file, haar_scale, haar_min_overlap));
-            }
-            detector = multiDetector;
+            std::for_each(haar_models.begin(), haar_models.end(), [&] (const std::pair<std::string, HaarModel> &pair) {
+                multiDetector->addDetector(pair.second.build());
+            });
+            detector.reset(multiDetector);
         }
         break;
 
@@ -256,13 +354,15 @@ int main(int argc, char **argv) {
 
     // setup gnomonic reprojection task
     if (gnomonic_enabled) {
-        detector = new GnomonicProjectionDetector(detector, gnomonic_width, gnomonic_aperture_x, gnomonic_aperture_y);
+        detector.reset(
+            new GnomonicProjectionDetector(detector, gnomonic_width, gnomonic_aperture_x, gnomonic_aperture_y)
+        );
     }
 
     // detect objects in source image
     bool success = false;
 
-    if (detector != NULL) {
+    if (detector) {
         // run detection algorithm
         std::list<DetectedObject> objects;
 
@@ -288,35 +388,29 @@ int main(int argc, char **argv) {
             break;
 
         case ALGORITHM_HAAR:
-            fs << "algorithm" << "haar";
             {
+                fs << "algorithm" << "haar";
                 fs << "haar" << "{";
-
-                fs << "scale" << haar_scale;
-                fs << "min_overlap" << haar_min_overlap;
-                fs << "models" << "[";
-                for (std::vector<struct haar_model>::const_iterator it = haar_models.begin(); it != haar_models.end(); ++it) {
-                    fs << "{:" << "className" << (*it).className << "model" << (*it).file << "}";
-                }
-                fs << "]";
-
+                    fs << "models" << "[";
+                    std::for_each(haar_models.begin(), haar_models.end(), [&] (const std::pair<std::string, HaarModel> &pair) {
+                        pair.second.write(fs);
+                    });
+                    fs << "]";
+                    fs << "scale" << haar_scale;
+                    fs << "min_overlap" << haar_min_overlap;
                 fs << "}";
             }
             break;
         }
         if (gnomonic_enabled) {
-            fs << "gnomonic" << "{:" << "width" << gnomonic_width << "aperture_x" << gnomonic_aperture_x << "aperture_y" << gnomonic_aperture_y << "}";
+            fs << "gnomonic" << "{" << "width" << gnomonic_width << "aperture_x" << gnomonic_aperture_x << "aperture_y" << gnomonic_aperture_y << "}";
         }
         fs << "source" << source_file;
         fs << "objects" << "[";
-        for (std::list<DetectedObject>::const_iterator it = objects.begin(); it != objects.end(); ++it) {
-            (*it).write(fs);
-        }
+        std::for_each(objects.begin(), objects.end(), [&] (const DetectedObject &object) {
+            object.write(fs);
+        });
         fs << "]";
-
-        // free detector(s)
-        delete detector;
-        detector = NULL;
     }
     return success ? 0 : 4;
 }

@@ -171,16 +171,14 @@ int main(int argc, char **argv) {
     }
 
     // merge detected objects
-    std::list<DetectedObject> mergedObjects;
-
-    ObjectDetector::merge(objects, mergedObjects);
+    ObjectDetector::merge(objects);
 
     // apply blur operation
-    for (std::list<DetectedObject>::const_iterator it = mergedObjects.begin(); it != mergedObjects.end(); ++it) {
-        std::vector<cv::Rect> rects = (*it).area.eqrRects(source.cols, source.rows);
+    std::for_each(objects.begin(), objects.end(), [&] (const DetectedObject &object) {
+        auto rects = object.area.rects(source.cols, source.rows);
 
-        for (std::vector<cv::Rect>::const_iterator it2 = rects.begin(); it2 != rects.end(); ++it2) {
-            cv::Mat region(source, *it2);
+        std::for_each(rects.begin(), rects.end(), [&] (const cv::Rect &rect) {
+            cv::Mat region(source, rect);
 
             switch (algorithm) {
             case ALGORITHM_NONE:
@@ -198,10 +196,10 @@ int main(int argc, char **argv) {
 
             default:
                 fprintf(stderr, "Error: unsupported blur algorithm!\n");
-                return 4;
+                break;
             }
-        }
-    }
+        });
+    });
 
     // save target file
     cv::imwrite(target_file, source);

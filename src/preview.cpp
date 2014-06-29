@@ -121,19 +121,35 @@ int main(int argc, char **argv) {
     }
 
     // merge detected objects
-    std::list<DetectedObject> mergedObjects;
+    ObjectDetector::merge(objects);
 
-    ObjectDetector::merge(objects, mergedObjects);
+    // draw detected objects
+    const int borderSize = 20;
+    cv::Scalar colors[] = {
+        cv::Scalar(0, 255, 255),
+        cv::Scalar(255, 0, 255),
+        cv::Scalar(0, 255, 255),
+        cv::Scalar(0, 0, 255),
+        cv::Scalar(0, 255, 0),
+        cv::Scalar(255, 0, 0)
+    };
+    std::function<void(const DetectedObject&, int)> drawObjectWithDepth = [&] (const DetectedObject &object, int depth) {
+        std::vector<cv::Rect> rects = object.area.rects(source.cols, source.rows);
 
-    // preview detected objects
-    for (std::list<DetectedObject>::const_iterator it = mergedObjects.begin(); it != mergedObjects.end(); ++it) {
-        std::vector<cv::Rect> rects = (*it).area.eqrRects(source.cols, source.rows);
-
-        for (std::vector<cv::Rect>::const_iterator it2 = rects.begin(); it2 != rects.end(); ++it2) {
-            putText(source, (*it).className, (*it2).tl(), CV_FONT_HERSHEY_SIMPLEX, 3, cv::Scalar(255, 255, 255), 3);
-            rectangle(source, *it2, cv::Scalar(0, 255, 255), 3);
+        for (auto it = rects.begin(); it != rects.end(); ++it) {
+            putText(source, object.className, (*it).tl(), CV_FONT_HERSHEY_SIMPLEX, 3, cv::Scalar(255, 255, 255), 3);
+            rectangle(source, *it, colors[depth], borderSize);
         }
-    }
+        for (auto it = object.children.begin(); it != object.children.end(); ++it) {
+            drawObjectWithDepth(*it, MAX(depth + 1, 5));
+        }
+    };
+    auto drawObject = [&] (const DetectedObject &object) {
+        drawObjectWithDepth(object, 0);
+    };
+
+    std::for_each(objects.begin(), objects.end(), drawObject);
+
     cv::namedWindow("preview", cv::WINDOW_NORMAL);
     cv::imshow("preview", source);
     while (cv::waitKey(0) != '\n');

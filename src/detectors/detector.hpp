@@ -43,10 +43,14 @@
 
 #include <bitset>
 #include <list>
+#include <memory>
 #include <string>
 #include <vector>
 
 #include <opencv2/opencv.hpp>
+
+
+#define CLAMP(x, a, b)  MIN(MAX(a, x), b)
 
 
 /**
@@ -55,50 +59,74 @@
  */
 class BoundingBox {
 public:
+    /**
+     * Supported coordinate systems.
+     *
+     */
+    enum CoordinateSystem { CARTESIAN = 1, SPHERICAL };
+
+
+    /** Coordinate system type */
+    CoordinateSystem system;
+
     /** Top-left / north-west point */
-    double p1[2];
+    cv::Point2d p1;
 
     /** Bottom-right / south-east point */
-    double p2[2];
+    cv::Point2d p2;
 
 
     /**
      * Empty constructor.
      */
-    BoundingBox() : p1 { 0, 0 }, p2 { 0, 0 } {
+    BoundingBox() : system(CARTESIAN) {
     }
 
     /**
      * Default constructor.
      *
-     * \param x1 x-coordinate of first point
-     * \param y1 y-coordinate of first point
-     * \param x2 x-coordinate of second point
-     * \param y2 y-coordinate of second point
+     * \param system coordinate system
      */
-    BoundingBox(double x1, double y1, double x2, double y2) : p1 { x1, y1 }, p2 { x2, y2 } {
+    BoundingBox(CoordinateSystem system) : system(system) {
     }
 
     /**
      * Default constructor.
      *
+     * \param system coordinate system
      * \param x1 x-coordinate of first point
      * \param y1 y-coordinate of first point
      * \param x2 x-coordinate of second point
      * \param y2 y-coordinate of second point
      */
-    BoundingBox(const cv::Rect &rect) : p1 { (double)rect.x, (double)rect.y }, p2 { (double)(rect.x + rect.width), (double)(rect.y + rect.height) } {
+    BoundingBox(CoordinateSystem system, double x1, double y1, double x2, double y2) : system(system), p1(x1, y1), p2(x2, y2) {
     }
 
     /**
      * Default constructor.
      *
-     * \param x1 x-coordinate of first point
-     * \param y1 y-coordinate of first point
-     * \param x2 x-coordinate of second point
-     * \param y2 y-coordinate of second point
+     * \param system coordinate system
+     * \param p1 first point
+     * \param p2 second point
      */
-    BoundingBox(const cv::Rect_<double> &rect) : p1 { rect.x, rect.y }, p2 { rect.x + rect.width, rect.y + rect.height } {
+    BoundingBox(CoordinateSystem system, const cv::Point2d &p1, const cv::Point2d &p2) : system(system), p1(p1), p2(p2) {
+    }
+
+    /**
+     * Default constructor.
+     *
+     * \param system coordinate system
+     * \param rect rectangle
+     */
+    BoundingBox(const cv::Rect &rect) : system(CARTESIAN), p1(rect.tl().x, rect.tl().y), p2(rect.br().x, rect.br().y) {
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * \param ref reference object
+     */
+    BoundingBox(const BoundingBox &ref) : system(ref.system), p1(ref.p1), p2(ref.p2) {
     }
 
     /**
@@ -107,23 +135,40 @@ public:
      * \param node storage node to read from
      */
     BoundingBox(const cv::FileNode &node) {
-        cv::Rect_<double> rect;
+        int system;
 
-        node >> rect;
-        this->p1[0] = rect.x;
-        this->p1[1] = rect.y;
-        this->p2[0] = rect.x + rect.width;
-        this->p2[1] = rect.y + rect.height;
+        node["system"] >> system;
+        node["p1"] >> this->p1;
+        node["p2"] >> this->p2;
+        this->system = (CoordinateSystem)system;
+    }
+
+
+    /**
+     * Write area to storage.
+     *
+     * \param fs storage to write to
+     */
+    void write(cv::FileStorage &fs) const {
+        fs << "{";
+            fs << "system" << (int)this->system;
+            fs << "p1" << this->p1;
+            fs << "p2" << this->p2;
+        fs << "}";
     }
 
     /**
-     * Copy constructor.
+     * Move coordinates.
      *
-     * \param ref reference object
+     * \param x x-axis translation
+     * \param y y-axis translation
      */
-    BoundingBox(const BoundingBox &ref) : p1 { ref.p1[0], ref.p1[1] }, p2 { ref.p2[0], ref.p2[1] } {
+    void move(double x, double y) {
+        this->p1.x += x;
+        this->p1.y += y;
+        this->p2.x += x;
+        this->p2.y += y;
     }
-
 
     /**
      * Check if other bounding box overlap, and if yes, merge other area
@@ -133,123 +178,134 @@ public:
      * \return true if overlap detected, false otherwise
      */
     bool mergeIfOverlap(const BoundingBox &other) {
-        double ax1 = this->p1[0];
-        double bx1 = other.p1[0];
-        double ay1 = this->p1[1];
-        double by1 = other.p1[1];
-        double ax2 = this->p2[0];
-        double bx2 = other.p2[0];
-        double ay2 = this->p2[1];
-        double by2 = other.p2[1];
-        double maxx = ax1;
-        double maxy = ay1;
+        double ax1 = this->p1.x;
+        double bx1 = other.p1.x;
+        double ay1 = this->p1.y;
+        double by1 = other.p1.y;
+        double ax2 = this->p2.x;
+        double bx2 = other.p2.x;
+        double ay2 = this->p2.y;
+        double by2 = other.p2.y;
 
-        if (maxx < bx1) {
-            maxx = bx1;
-        }
-        if (maxx < ax2) {
-            maxx = ax2;
-        }
-        if (maxx < bx2) {
-            maxx = bx2;
-        }
-        if (maxy < by1) {
-            maxy = by1;
-        }
-        if (maxy < ay2) {
-            maxy = ay2;
-        }
-        if (maxy < by2) {
-            maxy = by2;
-        }
+        switch (this->system) {
+        case CARTESIAN:
+            if (ax1 > bx2 || ax2 < bx1 ||
+                ay1 > by2 || ay2 < by1) {
+                return false;
+            }
 
-        if (this->p1[0] > this->p2[0]) {
-            ax2 += maxx;
-        }
-        if (other.p1[0] > other.p2[0]) {
-            bx2 += maxx;
-        }
-        if (this->p1[1] > this->p2[1]) {
-            ay2 += maxy;
-        }
-        if (other.p1[1] > other.p2[1]) {
-            by2 += maxy;
-        }
+            ax1 = MIN(ax1, bx1);
+            ay1 = MIN(ay1, by1);
+            ax2 = MAX(ax2, bx2);
+            ay2 = MAX(ay2, by2);
 
-        if (ax1 > bx2 || ax2 < bx1 ||
-            ay1 > by2 || ay2 < by1) {
-            return false;
-        }
-        if (ax1 > bx1) {
-            ax1 = bx1;
-        }
-        if (ay1 > by1) {
-            ay1 = by1;
-        }
-        if (ax2 < bx2) {
-            ax2 = bx2;
-        }
-        if (ay2 < by2) {
-            ay2 = by2;
-        }
-        this->p1[0] = ax1;
-        this->p1[1] = ay1;
-        if (this->p1[0] > this->p2[0]) {
-            this->p2[0] = ax2 - maxx;
-        } else {
-            this->p2[0] = ax2;
-        }
-        if (this->p1[1] > this->p2[1]) {
-            this->p2[1] = ay2 - maxy;
-        } else {
-            this->p2[1] = ay2;
-        }
-        return true;
-    }
+            this->p1.x = ax1;
+            this->p1.y = ay1;
+            this->p2.x = ax2;
+            this->p2.y = ay2;
+            return true;
 
+        case SPHERICAL:
+            {
+                double maxx = ax1;
+                double maxy = ay1;
 
-    /**
-     * Convert bounding box to opencv rectangle.
-     *
-     * \return opencv rectangle
-     */
-    cv::Rect_<double> rect() const {
-        return cv::Rect_<double>(
-            this->p1[0],
-            this->p1[1],
-            this->p2[0] - this->p1[0],
-            this->p2[1] - this->p1[1]
-        );
+                maxx = MAX(maxx, bx1);
+                maxx = MAX(maxx, ax2);
+                maxx = MAX(maxx, bx2);
+                maxy = MAX(maxy, by1);
+                maxy = MAX(maxy, ay2);
+                maxy = MAX(maxy, by2);
+
+                if (this->p1.x > this->p2.x) {
+                    ax2 += maxx;
+                }
+                if (other.p1.x > other.p2.x) {
+                    bx2 += maxx;
+                }
+                if (this->p1.y > this->p2.y) {
+                    ay2 += maxy;
+                }
+                if (other.p1.y > other.p2.y) {
+                    by2 += maxy;
+                }
+
+                if (ax1 > bx2 || ax2 < bx1 ||
+                    ay1 > by2 || ay2 < by1) {
+                    return false;
+                }
+
+                ax1 = MIN(ax1, bx1);
+                ay1 = MIN(ay1, by1);
+                ax2 = MAX(ax2, bx2);
+                ay2 = MAX(ay2, by2);
+
+                this->p1.x = ax1;
+                this->p1.y = ay1;
+                if (this->p1.x > this->p2.x) {
+                    this->p2.x = ax2 - maxx;
+                } else {
+                    this->p2.x = ax2;
+                }
+                if (this->p1.y > this->p2.y) {
+                    this->p2.y = ay2 - maxy;
+                } else {
+                    this->p2.y = ay2;
+                }
+            }
+            return true;
+        }
+        return false;
     }
 
     /**
-     * Convert bounding box to opencv rectangle assuming bounding box is given
-     * in spherical coordinates.
+     * Convert bounding box to opencv rectangle(s). If the coordinate system is
+     * spherical, multiple rectangles might be returned to cover the area.
      *
+     * \param width target image width
+     * \param height target image height
      * \return opencv rectangle(s)
      */
-    std::vector<cv::Rect> eqrRects(int width, int height) const {
+    std::vector<cv::Rect> rects(int width, int height) const {
         std::vector<cv::Rect> v;
-        int x1 = (int)(this->p1[0] / (2 * M_PI) * (width - 1));
-        int y1 = (int)((this->p1[1] + M_PI / 2) / M_PI * (height - 1));
-        int x2 = (int)(this->p2[0] / (2 * M_PI) * (width - 1));
-        int y2 = (int)((this->p2[1] + M_PI / 2) / M_PI * (height - 1));
 
-        if (x1 > x2) {
-            if (y1 > y2) {
-                v.push_back(cv::Rect(x1, y1, width - x1, height - y2));
-                v.push_back(cv::Rect(x1,  0, width - x1,      y2 + 1));
-                v.push_back(cv::Rect(0,  y1,     x2 + 1, height - y2));
-                v.push_back(cv::Rect(0,   0,     x2 + 1,      y2 + 1));
-            } else {
-                v.push_back(cv::Rect(x1,  y1, width - x1, y2 - y1 + 1));
-                v.push_back(cv::Rect(0,   y1,     x2 + 1, y2 - y1 + 1));
+        switch (this->system) {
+        case CARTESIAN:
+            {
+                int x1 = CLAMP((int)this->p1.x, 0, width);
+                int y1 = CLAMP((int)this->p1.y, 0, height);
+                int x2 = CLAMP((int)this->p2.x, 0, width);
+                int y2 = CLAMP((int)this->p2.y, 0, height);
+
+                v.push_back(cv::Rect(x1, y1, x2 - x1, y2 - y1));
             }
-        } else if (y1 > y2) {
-            v.push_back(cv::Rect(x1, y1, x2 - x1 + 1, height - y1));
-            v.push_back(cv::Rect(x1,  0, x2 - x1 + 1,      y2 + 1));
-        } else {
-            v.push_back(cv::Rect(x1, y1, x2 - x1 + 1, y2 - y1 + 1));
+            break;
+
+        case SPHERICAL:
+            {
+                int x1 = (int)(this->p1.x / (2 * M_PI) * width);
+                int y1 = (int)((this->p1.y + M_PI / 2) / M_PI * height);
+                int x2 = (int)(this->p2.x / (2 * M_PI) * width);
+                int y2 = (int)((this->p2.y + M_PI / 2) / M_PI * height);
+
+                if (x1 > x2) {
+                    if (y1 > y2) {
+                        v.push_back(cv::Rect(x1, y1, width - x1, height - y2));
+                        v.push_back(cv::Rect(x1,  0, width - x1,          y2));
+                        v.push_back(cv::Rect(0,  y1,         x2, height - y2));
+                        v.push_back(cv::Rect(0,   0,         x2,          y2));
+                    } else {
+                        v.push_back(cv::Rect(x1, y1, width - x1,     y2 - y1));
+                        v.push_back(cv::Rect(0,  y1,         x2,     y2 - y1));
+                    }
+                } else if (y1 > y2) {
+                    v.push_back(cv::Rect(x1, y1, x2 - x1, height - y1));
+                    v.push_back(cv::Rect(x1,  0, x2 - x1,          y2));
+                } else {
+                    v.push_back(cv::Rect(x1, y1, x2 - x1, y2 - y1));
+                }
+            }
+            break;
         }
         return v;
     }
@@ -268,6 +324,9 @@ public:
     /** Rough bounding area in source image */
     BoundingBox area;
 
+    /** Children objects */
+    std::list<DetectedObject> children;
+
 
     /**
      * Empty constructor.
@@ -285,17 +344,32 @@ public:
     }
 
     /**
-     * Storage constructor.
+     * Default constructor.
      *
-     * \param node storage node to read from
+     * \param className object class name
+     * \param area bounding area
+     * \param children children objects
      */
-    DetectedObject(const cv::FileNode &node) : className(node["className"]), area(node["area"]) {
+    DetectedObject(const std::string &className, const BoundingBox &area, const std::list<DetectedObject> &children) : className(className), area(area), children(children) {
     }
 
     /**
      * Copy constructor.
      */
-    DetectedObject(const DetectedObject &ref) : className(ref.className), area(ref.area) {
+    DetectedObject(const DetectedObject &ref) : className(ref.className), area(ref.area), children(ref.children) {
+    }
+
+    /**
+     * Storage constructor.
+     *
+     * \param node storage node to read from
+     */
+    DetectedObject(const cv::FileNode &node) : className(node["className"]), area(node["area"]) {
+        auto childrenNode = node["children"];
+
+        for (auto it = childrenNode.begin(); it != childrenNode.end(); ++it) {
+            this->children.push_back(*it);
+        }
     }
 
 
@@ -306,9 +380,48 @@ public:
      */
     void write(cv::FileStorage &fs) const {
         fs << "{";
-        fs << "className" << this->className;
-        fs << "area" << this->area.rect();
+            fs << "className" << this->className;
+            fs << "area";
+            this->area.write(fs);
+            if (!this->children.empty()) {
+                fs << "children" << "[";
+                    for (auto it = this->children.begin(); it != this->children.end(); ++it) {
+                        (*it).write(fs);
+                    }
+                fs << "]";
+            }
         fs << "}";
+    }
+
+    /**
+     * Add a child detection.
+     *
+     * \param child child object
+     */
+    void addChild(const DetectedObject &child) {
+        this->children.push_back(child);
+    }
+
+    /**
+     * Add children detection.
+     *
+     * \param children child objects
+     */
+    void addChildren(const std::list<DetectedObject> &children) {
+        this->children.insert(this->children.end(), children.begin(), children.end());
+    }
+
+    /**
+     * Move object coordinates.
+     *
+     * \param x x-axis translation
+     * \param y y-axis translation
+     */
+    void move(double x, double y) {
+        this->area.move(x, y);
+        for (auto it = this->children.begin(); it != this->children.end(); ++it) {
+            (*it).move(x, y);
+        }
     }
 };
 
@@ -367,10 +480,10 @@ public:
             return false;
         }
 
-        cv::FileNode objectsNode = fs["objects"];
+        auto objectsNode = fs["objects"];
 
-        for (cv::FileNodeIterator it = objectsNode.begin(); it != objectsNode.end(); ++it) {
-            objects.push_back(DetectedObject(*it));
+        for (auto it = objectsNode.begin(); it != objectsNode.end(); ++it) {
+            objects.push_back(*it);
         }
         return true;
     }
@@ -378,13 +491,13 @@ public:
     /**
      * Merge overlapping detected objects.
      *
-     * \param objects detected objects
-     * \param result output list of merge objects
+     * \param objects detected objects (input/output)
      */
-    static void merge(const std::list<DetectedObject> &objects, std::list<DetectedObject> &result) {
+    static void merge(std::list<DetectedObject> &objects) {
         std::vector<DetectedObject> v(objects.begin(), objects.end());
         std::set<unsigned int> used;
 
+        objects.clear();
         for (unsigned int i = 0; i < v.size(); i++) {
             if (used.find(i) != used.end()) {
                 continue;
@@ -393,6 +506,7 @@ public:
 
             BoundingBox area(v[i].area);
             std::set<std::string> classNames;
+            std::list<DetectedObject> children(v[i].children);
 
             classNames.insert(v[i].className);
             for (unsigned int j = i + 1; j < v.size(); j++) {
@@ -401,6 +515,7 @@ public:
                 }
                 if (area.mergeIfOverlap(v[j].area)) {
                     classNames.insert(v[j].className);
+                    children.insert(children.end(), v[j].children.begin(), v[j].children.end());
                     used.insert(j);
                     j = i;
                 }
@@ -415,93 +530,10 @@ public:
                 className.append(*it);
             }
 
-            result.push_back(DetectedObject(className, area));
+            ObjectDetector::merge(children);
+
+            objects.push_back(DetectedObject(className, area, children));
         }
-    }
-};
-
-
-/**
- * Object detector with multiple underlying detectors.
- *
- */
-class MultiDetector : public ObjectDetector {
-protected:
-    /** Underlying object detectors */
-    std::list<ObjectDetector*> detectors;
-
-
-public:
-    /**
-     * Empty constructor.
-     */
-    MultiDetector() : ObjectDetector() {
-    }
-
-    /**
-     * Empty destructor.
-     */
-    virtual ~MultiDetector() {
-        while (!this->detectors.empty()) {
-            delete this->detectors.back();
-            this->detectors.pop_back();
-        }
-    }
-
-
-    /**
-     * Add an underlying object detector applied to gnomonic reprojections.
-     *
-     * The detector memory will be automatically freed.
-     *
-     * \param detector pointer to detector to add
-     */
-    MultiDetector* addDetector(ObjectDetector* detector) {
-        this->detectors.push_back(detector);
-        return this;
-    }
-
-
-    /**
-     * Check if this object detector supports color images.
-     *
-     * \return true if detector works with color images, false otherwise.
-     */
-    virtual bool supportsColor() const {
-        for (std::list<ObjectDetector*>::const_iterator it = this->detectors.begin(); it != this->detectors.end(); ++it) {
-            if ((*it)->supportsColor()) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /*
-     * Execute object detector against given image.
-     *
-     * \param source source image to scan for objects
-     * \param objects output list of detected objects
-     * \return true on success, false otherwise
-     */
-    virtual bool detect(const cv::Mat &source, std::list<DetectedObject> &objects) {
-        cv::Mat graySource(source);
-
-        for (std::list<ObjectDetector*>::const_iterator it = this->detectors.begin(); it != this->detectors.end(); ++it) {
-            if ((*it)->supportsColor()) {
-                if (!(*it)->detect(source, objects)) {
-                    return false;
-                }
-            } else {
-                if (graySource.channels() != 1) {
-                    cv::cvtColor(source, graySource, cv::COLOR_RGB2GRAY);
-                    // cv::equalizeHist(graySource, graySource);
-                }
-                if (!(*it)->detect(graySource, objects)) {
-                    return false;
-                }
-            }
-        }
-        return true;
     }
 };
 

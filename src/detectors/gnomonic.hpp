@@ -53,7 +53,7 @@
 class GnomonicProjectionDetector : public ObjectDetector {
 protected:
     /** Underlying object detector */
-    ObjectDetector* detector;
+    std::shared_ptr<ObjectDetector> detector;
 
     /** Projection window width */
     int width;
@@ -78,7 +78,7 @@ public:
     /**
      * Empty constructor.
      */
-    GnomonicProjectionDetector() : ObjectDetector(), detector(NULL), width(512), height(512), ax(M_PI / 3), ay(M_PI / 3), hax(M_PI / 6), hay(M_PI / 6) {
+    GnomonicProjectionDetector() : ObjectDetector(), width(512), height(512), ax(M_PI / 3), ay(M_PI / 3), hax(M_PI / 6), hay(M_PI / 6) {
     }
 
     /**
@@ -89,14 +89,13 @@ public:
      * \param ax projection window horizontal aperture in radian
      * \param ay projection window vertical aperture in radian
      */
-    GnomonicProjectionDetector(ObjectDetector* detector, int width, double ax = M_PI / 3, double ay = M_PI / 3) : ObjectDetector(), detector(detector), width(width), height(width * ay / ax), ax(ax), ay(ay), hax(ax / 2), hay(ay / 2) {
+    GnomonicProjectionDetector(const std::shared_ptr<ObjectDetector> &detector, int width, double ax = M_PI / 3, double ay = M_PI / 3) : ObjectDetector(), detector(detector), width(width), height(width * ay / ax), ax(ax), ay(ay), hax(ax / 2), hay(ay / 2) {
     }
 
     /**
      * Empty destructor.
      */
     virtual ~GnomonicProjectionDetector() {
-        delete detector;
     }
 
 
@@ -106,7 +105,7 @@ public:
      * \return true if detector works with color images, false otherwise.
      */
     virtual bool supportsColor() const {
-        return (this->detector != NULL ? this->detector->supportsColor() : true);
+        return !this->detector || this->detector->supportsColor();
     }
 
     /*
@@ -120,18 +119,9 @@ public:
         cv::Mat window(this->height, this->width, source.type());
         double tax = tan(this->hax);
         double tay = tan(this->hay);
-        // const int PREVIEW_SIZE = 256;
-        // cv::Mat preview(source);
-        // cv::Mat windows(
-        //     PREVIEW_SIZE * ((M_PI / this->hay) + 1),
-        //     PREVIEW_SIZE * ((2 * M_PI / this->hax) + 1),
-        //     source.type()
-        // );
-        // int ix = 0, iy = 0;
 
         // scan the whole source image in eqr projection
         for (double y = M_PI / 2; y >= -M_PI / 2; y -= this->hay) {
-            // ix = 0;
             for (double x = 0; x <= 2 * M_PI; x += this->hax) {
                 // gnomonic projection of current area
                 gnomonic_etg(
@@ -153,7 +143,7 @@ public:
                 // detect objects within reprojected area
                 std::list<DetectedObject> window_objects;
 
-                if (this->detector != NULL && !this->detector->detect(window, window_objects)) {
+                if (this->detector && !this->detector->detect(window, window_objects)) {
                     return false;
                 }
 
@@ -185,54 +175,40 @@ public:
                     }
                     eqr_theta = asin(z);
                 };
-
-                for (std::list<DetectedObject>::const_iterator it = window_objects.begin(); it != window_objects.end(); ++it) {
+                std::function<void(DetectedObject &)> eqrMapper = [&] (DetectedObject &object) {
                     // map bounding box to eqr coordinates
-                    const BoundingBox &gnomonicArea = (*it).area;
-                    BoundingBox eqrArea;
+                    const BoundingBox &gnomonicArea = object.area;
+                    BoundingBox eqrArea(BoundingBox::SPHERICAL);
 
-                    eqrCoordinateMapper(gnomonicArea.p1[0], gnomonicArea.p1[1], eqrArea.p1[0], eqrArea.p1[1]);
-                    eqrCoordinateMapper(gnomonicArea.p2[0], gnomonicArea.p2[1], eqrArea.p2[0], eqrArea.p2[1]);
+                    eqrCoordinateMapper((int)gnomonicArea.p1.x, (int)gnomonicArea.p1.y, eqrArea.p1.x, eqrArea.p1.y);
+                    eqrCoordinateMapper((int)gnomonicArea.p2.x, (int)gnomonicArea.p2.y, eqrArea.p2.x, eqrArea.p2.y);
 
                     // swap bounding box coordinates if necessary
-                    if (eqrArea.p1[0] > eqrArea.p2[0] && (2 * M_PI - eqrArea.p1[0] + eqrArea.p2[0]) > this->ax) {
-                        double tmp = eqrArea.p1[0];
+                    if (eqrArea.p1.x > eqrArea.p2.x && (2 * M_PI - eqrArea.p1.x + eqrArea.p2.x) > this->ax) {
+                        double tmp = eqrArea.p1.x;
 
-                        eqrArea.p1[0] = eqrArea.p2[0];
-                        eqrArea.p2[0] = tmp;
+                        eqrArea.p1.x = eqrArea.p2.x;
+                        eqrArea.p2.x = tmp;
                     }
-                    if (eqrArea.p1[1] > eqrArea.p2[1] && (M_PI - eqrArea.p1[1] + eqrArea.p2[1]) > this->ay) {
-                        double tmp = eqrArea.p1[1];
+                    if (eqrArea.p1.y > eqrArea.p2.y && (M_PI - eqrArea.p1.y + eqrArea.p2.y) > this->ay) {
+                        double tmp = eqrArea.p1.y;
 
-                        eqrArea.p1[1] = eqrArea.p2[1];
-                        eqrArea.p2[1] = tmp;
+                        eqrArea.p1.y = eqrArea.p2.y;
+                        eqrArea.p2.y = tmp;
                     }
+                    object.area = eqrArea;
 
-                    objects.push_back(DetectedObject((*it).className, eqrArea));
+                    // map children
+                    std::for_each(object.children.begin(), object.children.end(), [&] (DetectedObject &child) {
+                        eqrMapper(child);
+                    });
+                };
 
-                    // std::vector<cv::Rect> rects = eqrArea.eqrRects(preview.cols, preview.rows);
-
-                    // rectangle(window, gnomonicArea.rect(), cv::Scalar(0, 255, 255), 4);
-                    // for (std::vector<cv::Rect>::const_iterator it2 = rects.begin(); it2 != rects.end(); ++it2) {
-                    //     rectangle(preview, *it2, cv::Scalar(0, 255, 255), 4);
-                    // }
-                }
-
-                // cv::Mat region(
-                //     windows,
-                //     cv::Range(iy * PREVIEW_SIZE, (iy + 1) * PREVIEW_SIZE),
-                //     cv::Range(ix * PREVIEW_SIZE, (ix + 1) * PREVIEW_SIZE)
-                // );
-
-                // cv::resize(window, region, region.size());
-                // cv::namedWindow("gnomonic", CV_WINDOW_NORMAL);
-                // cv::imshow("gnomonic", windows);
-                // cv::namedWindow("preview", CV_WINDOW_NORMAL);
-                // cv::imshow("preview", preview);
-                // cv::waitKey(10);
-                // ix++;
+                std::for_each(window_objects.begin(), window_objects.end(), [&] (DetectedObject &object) {
+                    eqrMapper(object);
+                    objects.push_back(object);
+                });
             }
-            // iy++;
         }
         return true;
     }

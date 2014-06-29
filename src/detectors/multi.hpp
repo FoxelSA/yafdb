@@ -37,55 +37,47 @@
  */
 
 
-#ifndef __YAFDB_DETECTORS_HAAR_H_INCLUDE__
-#define __YAFDB_DETECTORS_HAAR_H_INCLUDE__
+#ifndef __YAFDB_DETECTORS_MULTI_H_INCLUDE__
+#define __YAFDB_DETECTORS_MULTI_H_INCLUDE__
 
 
 #include "detector.hpp"
 
 
 /**
- * OpenCV haar cascades object detector.
+ * Object detector with multiple underlying detectors.
  *
  */
-class HaarDetector : public ObjectDetector {
+class MultiObjectDetector : public ObjectDetector {
 protected:
-    /** Object class name */
-    std::string className;
-
-    /** Loaded classifier */
-    cv::CascadeClassifier classifier;
-
-    /** Scale factor */
-    double scaleFactor;
-
-    /** Minimum match overlap */
-    int minOverlap;
+    /** Underlying object detectors */
+    std::list<std::shared_ptr<ObjectDetector>> detectors;
 
 
 public:
     /**
      * Empty constructor.
      */
-    HaarDetector() : ObjectDetector(), className("object"), scaleFactor(1.1), minOverlap(5) {
-    }
-
-    /**
-     * Default constructor.
-     *
-     * \param className object class name
-     * \param modelFile haar model filename
-     * \param scaleFactor haar reduction factor after each iteration
-     * \param minOverlap minimum match overlap
-     */
-    HaarDetector(const std::string &className, const std::string &modelFile, double scaleFactor = 1.1, int minOverlap = 5) : ObjectDetector(), className(className), scaleFactor(scaleFactor), minOverlap(minOverlap) {
-        this->classifier.load(modelFile);
+    MultiObjectDetector() : ObjectDetector() {
     }
 
     /**
      * Empty destructor.
      */
-    virtual ~HaarDetector() {
+    virtual ~MultiObjectDetector() {
+    }
+
+
+    /**
+     * Add an underlying object detector applied to gnomonic reprojections.
+     *
+     * The detector memory will be automatically freed.
+     *
+     * \param detector pointer to detector to add
+     */
+    MultiObjectDetector* addDetector(const std::shared_ptr<ObjectDetector> &detector) {
+        this->detectors.push_back(detector);
+        return this;
     }
 
 
@@ -94,8 +86,10 @@ public:
      *
      * \return true if detector works with color images, false otherwise.
      */
-    virtual bool supportsColors() const {
-        return false;
+    virtual bool supportsColor() const {
+        return std::any_of(this->detectors.begin(), this->detectors.end(), [] (const std::shared_ptr<ObjectDetector> &detector) {
+            return detector->supportsColor();
+        });
     }
 
     /*
@@ -106,15 +100,20 @@ public:
      * \return true on success, false otherwise
      */
     virtual bool detect(const cv::Mat &source, std::list<DetectedObject> &objects) {
-        std::vector<cv::Rect> rects;
+        cv::Mat graySource(source);
 
-        this->classifier.detectMultiScale(source, rects, this->scaleFactor, this->minOverlap, 0, cv::Size(10, 10), cv::Size());
-        std::for_each(rects.begin(), rects.end(), [&] (const cv::Rect &rect) {
-            objects.push_back(DetectedObject(this->className, rect));
+        return std::all_of(this->detectors.begin(), this->detectors.end(), [&] (const std::shared_ptr<ObjectDetector> &detector) {
+            if (!detector->supportsColor()) {
+                if (graySource.channels() != 1) {
+                    cv::cvtColor(source, graySource, cv::COLOR_RGB2GRAY);
+                    // cv::equalizeHist(graySource, graySource);
+                }
+                return detector->detect(graySource, objects);
+            }
+            return detector->detect(source, objects);
         });
-        return true;
     }
 };
 
 
-#endif //__YAFDB_DETECTORS_HAAR_H_INCLUDE__
+#endif //__YAFDB_DETECTORS_MULTI_H_INCLUDE__
