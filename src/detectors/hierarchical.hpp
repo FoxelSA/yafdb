@@ -106,6 +106,23 @@ public:
 
 
     /**
+     * Enable detected object export.
+     *
+     * \param path target path for image files
+     * \param suffix image file suffix (such as '.png')
+     */
+    virtual void setObjectExport(const std::string &path, const std::string &suffix) {
+        if (this->parent) {
+            this->parent->setObjectExport(path, suffix);
+        }
+        std::for_each(this->children.begin(), this->children.end(), [&] (ObjectDetectorConfig &config) {
+            if (config.detector) {
+                config.detector->setObjectExport(path, suffix);
+            }
+        });
+    }
+
+    /**
      * Check if this object detector supports color images.
      *
      * \return true if detector works with color images, false otherwise.
@@ -146,9 +163,8 @@ public:
 
         // check children detectors
         std::for_each(parentObjects.begin(), parentObjects.end(), [&] (DetectedObject &object) {
-            // note: only supports lookup within single region (doesn't work with eqr regions)
-            cv::Rect area = object.area.rects(source.cols, source.rows)[0];
-            cv::Mat region(source, area);
+            auto firstRect = object.area.rects(source.cols, source.rows)[0];
+            cv::Mat region(this->getObjectRegion(source, object));
             cv::Mat grayRegion(region);
 
             // keep object?
@@ -184,7 +200,7 @@ public:
 
                 // remap coordinates
                 std::for_each(childObjects.begin(), childObjects.end(), [&] (DetectedObject &childObject) {
-                    childObject.move(area.x, area.y);
+                    childObject.move(firstRect.x, firstRect.y);
                 });
 
                 object.addChildren(childObjects);

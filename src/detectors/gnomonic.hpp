@@ -100,6 +100,19 @@ public:
 
 
     /**
+     * Enable detected object export.
+     *
+     * \param path target path for image files
+     * \param suffix image file suffix (such as '.png')
+     */
+    virtual void setObjectExport(const std::string &path, const std::string &suffix) {
+        if (this->detector) {
+            this->detector->setObjectExport(path, suffix);
+        }
+    }
+
+
+    /**
      * Check if this object detector supports color images.
      *
      * \return true if detector works with color images, false otherwise.

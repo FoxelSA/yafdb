@@ -52,14 +52,20 @@
  *
  */
 
-#define OPTION_PREVIEW              0
+#define OPTION_MERGE_DISABLE          0
+#define OPTION_MERGE_MIN_OVERLAP      1
+#define OPTION_PREVIEW                2
 
+static int merge_enabled = 1;
+static int merge_min_overlap = 1;
 static const char *source_file = NULL;
 static const char *objects_file = NULL;
 static const char *mask_file = NULL;
 
 static struct option options[] = {
-    {"preview",         required_argument,       0, 0},
+    {"merge-disable",             no_argument,       &merge_enabled,     0 },
+    {"merge-min-overlap",         required_argument, 0,                  0 },
+    {"preview",                   required_argument, 0,                  0 },
     {0, 0, 0, 0}
 };
 
@@ -76,6 +82,8 @@ void usage() {
     printf("given in input text file.\n\n");
 
     printf("General options:\n\n");
+    printf("--merge-disable: don't merge overlapping rectangles\n");
+    printf("--merge-min-overlap 1 : minimum occurrence of overlap to keep detected objects\n");
     printf("--preview input-image.tiff: preview detection errors\n");
     printf("\n");
 }
@@ -112,6 +120,13 @@ int main(int argc, char **argv) {
         }
 
         switch (index) {
+        case OPTION_MERGE_DISABLE:
+            break;
+
+        case OPTION_MERGE_MIN_OVERLAP:
+            merge_min_overlap = atoi(optarg);
+            break;
+
         case OPTION_PREVIEW:
             if (access(optarg, R_OK)) {
                 fprintf(stderr, "Error: source file not readable: %s\n", optarg);
@@ -146,6 +161,11 @@ int main(int argc, char **argv) {
     if (!ObjectDetector::load(objects_file, objects)) {
         fprintf(stderr, "Error: cannot read objects in file: %s\n", objects_file);
         return 2;
+    }
+
+    // merge detected objects
+    if (merge_enabled) {
+        ObjectDetector::merge(objects, merge_min_overlap);
     }
 
     // compute detected mask

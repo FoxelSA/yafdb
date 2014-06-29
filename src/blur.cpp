@@ -62,10 +62,12 @@
  */
 
 #define OPTION_ALGORITHM              0
-#define OPTION_GAUSSIAN_KERNEL        1
+#define OPTION_MERGE_MIN_OVERLAP      1
+#define OPTION_GAUSSIAN_KERNEL        2
 
 
 static int algorithm = ALGORITHM_GAUSSIAN;
+static int merge_min_overlap = 1;
 static double gaussian_kernel_size = 65;
 static const char *source_file = NULL;
 static const char *objects_file = NULL;
@@ -74,6 +76,7 @@ static const char *target_file = NULL;
 
 static struct option options[] = {
     {"algorithm",           required_argument, 0,                 'a'},
+    {"merge-min-overlap",   required_argument, 0,                  0 },
     {"gaussian-kernel",     required_argument, 0,                  0 },
     {0, 0, 0, 0}
 };
@@ -89,11 +92,12 @@ void usage() {
     printf("Blurs detected objects and write modified image as output.\n\n");
 
     printf("General options:\n\n");
-    printf("--algorithm algo: algorithm to use for blurring ('gaussian')\n");
+    printf("--algorithm algo : algorithm to use for blurring ('gaussian')\n");
+    printf("--merge-min-overlap 1 : minimum occurrence of overlap to keep detected objects\n");
     printf("\n");
 
     printf("Gaussian options:\n\n");
-    printf("--gaussian-kernel 65: gaussian kernel size\n");
+    printf("--gaussian-kernel 65 : gaussian kernel size\n");
     printf("\n");
 }
 
@@ -144,6 +148,10 @@ int main(int argc, char **argv) {
             }
             break;
 
+        case OPTION_MERGE_MIN_OVERLAP:
+            merge_min_overlap = atoi(optarg);
+            break;
+
         case OPTION_GAUSSIAN_KERNEL:
             gaussian_kernel_size = atof(optarg);
             break;
@@ -171,7 +179,7 @@ int main(int argc, char **argv) {
     }
 
     // merge detected objects
-    ObjectDetector::merge(objects);
+    ObjectDetector::merge(objects, merge_min_overlap);
 
     // apply blur operation
     std::for_each(objects.begin(), objects.end(), [&] (const DetectedObject &object) {

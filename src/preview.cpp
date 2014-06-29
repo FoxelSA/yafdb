@@ -51,11 +51,19 @@
  *
  */
 
+#define OPTION_MERGE_DISABLE          0
+#define OPTION_MERGE_MIN_OVERLAP      1
+
+
+static int merge_enabled = 1;
+static int merge_min_overlap = 1;
 static const char *source_file = NULL;
 static const char *objects_file = NULL;
 
 
 static struct option options[] = {
+    {"merge-disable",             no_argument,       &merge_enabled,     0 },
+    {"merge-min-overlap",         required_argument, 0,                  0 },
     {0, 0, 0, 0}
 };
 
@@ -68,6 +76,11 @@ void usage() {
     printf("yafdb-preview input-image.tiff input-objects.yml\n\n");
 
     printf("Preview detected objects in source image.\n\n");
+
+    printf("General options:\n\n");
+    printf("--merge-disable: don't merge overlapping rectangles\n");
+    printf("--merge-min-overlap 1 : minimum occurrence of overlap to keep detected objects\n");
+    printf("\n");
 }
 
 
@@ -100,8 +113,18 @@ int main(int argc, char **argv) {
             break;
         }
 
-        usage();
-        return 1;
+        switch (index) {
+        case OPTION_MERGE_DISABLE:
+            break;
+
+        case OPTION_MERGE_MIN_OVERLAP:
+            merge_min_overlap = atoi(optarg);
+            break;
+
+        default:
+            usage();
+            return 1;
+        }
     }
 
     // read source file
@@ -121,7 +144,9 @@ int main(int argc, char **argv) {
     }
 
     // merge detected objects
-    ObjectDetector::merge(objects);
+    if (merge_enabled) {
+        ObjectDetector::merge(objects, merge_min_overlap);
+    }
 
     // draw detected objects
     const int borderSize = 20;

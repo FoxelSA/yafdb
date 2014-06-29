@@ -61,23 +61,38 @@
 
 
 /*
+ * List of supported image formats.
+ *
+ */
+
+#define FORMAT_NONE       0
+#define FORMAT_PNG        1
+#define FORMAT_JPEG       2
+#define FORMAT_TIFF       3
+
+
+/*
  * Program arguments.
  *
  */
 
 #define OPTION_ALGORITHM              0
-#define OPTION_GNOMONIC               1
-#define OPTION_GNOMONIC_WIDTH         2
-#define OPTION_GNOMONIC_APERTURE_X    3
-#define OPTION_GNOMONIC_APERTURE_Y    4
-#define OPTION_HAAR_MODEL             5
-#define OPTION_HAAR_SCALE             6
-#define OPTION_HAAR_MIN_OVERLAP       7
+#define OPTION_EXPORT_FORMAT          1
+#define OPTION_EXPORT_PATH            2
+#define OPTION_GNOMONIC               3
+#define OPTION_GNOMONIC_WIDTH         4
+#define OPTION_GNOMONIC_APERTURE_X    5
+#define OPTION_GNOMONIC_APERTURE_Y    6
+#define OPTION_HAAR_MODEL             7
+#define OPTION_HAAR_SCALE             8
+#define OPTION_HAAR_MIN_OVERLAP       9
 
 
 class HaarModel;
 
 static int algorithm = ALGORITHM_HAAR;
+static int export_format = FORMAT_PNG;
+static const char *export_path = NULL;
 static int gnomonic_enabled = 0;
 static int gnomonic_width = 2048;
 static double gnomonic_aperture_x = 60;
@@ -90,14 +105,16 @@ static const char *objects_file = NULL;
 
 
 static struct option options[] = {
-    {"algorithm",           required_argument, 0,                 'a'},
-    {"gnomonic",            no_argument,       &gnomonic_enabled,  1},
-    {"gnomonic-width",      required_argument, 0,                  0},
-    {"gnomonic-aperture-x", required_argument, 0,                  0},
-    {"gnomonic-aperture-y", required_argument, 0,                  0},
-    {"haar-model",          required_argument, 0,                  0},
-    {"haar-scale",          required_argument, 0,                  0},
-    {"haar-min-overlap",    required_argument, 0,                  0},
+    {"algorithm",            required_argument, 0,                 'a'},
+    {"export-format",        required_argument, 0,                  0 },
+    {"export-path",          required_argument, 0,                  0 },
+    {"gnomonic",             no_argument,       &gnomonic_enabled,  1 },
+    {"gnomonic-width",       required_argument, 0,                  0 },
+    {"gnomonic-aperture-x",  required_argument, 0,                  0 },
+    {"gnomonic-aperture-y",  required_argument, 0,                  0 },
+    {"haar-model",           required_argument, 0,                  0 },
+    {"haar-scale",           required_argument, 0,                  0 },
+    {"haar-min-overlap",     required_argument, 0,                  0 },
     {0, 0, 0, 0}
 };
 
@@ -219,6 +236,8 @@ void usage() {
 
     printf("General options:\n\n");
     printf("--algorithm algo : algorithm to use for object detection ('haar')\n");
+    printf("--export-path folder/ : set exported object image path\n");
+    printf("--export-format png : set exported object image format ('png', 'jpeg', 'tiff')\n");
     printf("\n");
 
     printf("Gnomonic projection options:\n\n");
@@ -282,6 +301,24 @@ int main(int argc, char **argv) {
             } else {
                 fprintf(stderr, "Error: unsupported algorithm: %s\n", optarg);
             }
+            break;
+
+        case OPTION_EXPORT_FORMAT:
+            if (strcmp(optarg, "none") == 0) {
+                export_format = FORMAT_NONE;
+            } else if (strcmp(optarg, "png") == 0) {
+                export_format = FORMAT_PNG;
+            } else if (strcmp(optarg, "jpeg") == 0) {
+                export_format = FORMAT_JPEG;
+            } else if (strcmp(optarg, "tiff") == 0) {
+                export_format = FORMAT_TIFF;
+            } else {
+                fprintf(stderr, "Error: unsupported export format: %s\n", optarg);
+            }
+            break;
+
+        case OPTION_EXPORT_PATH:
+            export_path = optarg;
             break;
 
         case OPTION_GNOMONIC:
@@ -359,6 +396,37 @@ int main(int argc, char **argv) {
         );
     }
 
+    // set export of detected objects in native projection
+    if (export_format != FORMAT_NONE && export_path != NULL) {
+        // create export folder
+        std::stringstream stream(export_path);
+        std::string path;
+
+        for (std::string item; std::getline(stream, item, '/'); ) {
+            if (path.length() > 0) {
+                path.append("/");
+            }
+            path.append(item);
+            mkdir(path.c_str(), 0755);
+        }
+
+        // enable detected object export
+        switch (export_format) {
+        case FORMAT_PNG:
+            detector->setObjectExport(export_path, ".png");
+            break;
+        case FORMAT_JPEG:
+            detector->setObjectExport(export_path, ".jpeg");
+            break;
+        case FORMAT_TIFF:
+            detector->setObjectExport(export_path, ".tiff");
+            break;
+        default:
+            fprintf(stderr, "Error: unsupported export image format!\n");
+            return 3;
+        }
+    }
+
     // detect objects in source image
     bool success = false;
 
@@ -404,6 +472,9 @@ int main(int argc, char **argv) {
         }
         if (gnomonic_enabled) {
             fs << "gnomonic" << "{" << "width" << gnomonic_width << "aperture_x" << gnomonic_aperture_x << "aperture_y" << gnomonic_aperture_y << "}";
+        }
+        if (export_format != FORMAT_NONE && export_path != NULL) {
+            fs << "export" << "{" << "format" << export_format << "path" << export_path << "}";
         }
         fs << "source" << source_file;
         fs << "objects" << "[";

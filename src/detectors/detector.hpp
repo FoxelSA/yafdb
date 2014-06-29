@@ -41,6 +41,12 @@
 #define __YAFDB_DETECTORS_DETECTOR_H_INCLUDE__
 
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <memory.h>
+#include <time.h>
+#include <sys/stat.h>
+
 #include <bitset>
 #include <list>
 #include <memory>
@@ -291,8 +297,8 @@ public:
                 if (x1 > x2) {
                     if (y1 > y2) {
                         v.push_back(cv::Rect(x1, y1, width - x1, height - y2));
-                        v.push_back(cv::Rect(x1,  0, width - x1,          y2));
                         v.push_back(cv::Rect(0,  y1,         x2, height - y2));
+                        v.push_back(cv::Rect(x1,  0, width - x1,          y2));
                         v.push_back(cv::Rect(0,   0,         x2,          y2));
                     } else {
                         v.push_back(cv::Rect(x1, y1, width - x1,     y2 - y1));
@@ -431,17 +437,131 @@ public:
  *
  */
 class ObjectDetector {
+protected:
+    /** Enable object export */
+    bool exportEnable;
+
+    /** Object export path */
+    std::string exportPath;
+
+    /** Object export filename suffix */
+    std::string exportSuffix;
+
+
+    /**
+     * Get detected object region.
+     *
+     * \param source source image to scan for objects
+     * \param object detected object
+     * \return detected object region
+     */
+    cv::Mat getObjectRegion(const cv::Mat &source, const DetectedObject &object) {
+        auto rects = object.area.rects(source.cols, source.rows);
+
+        if (rects.size() == 4) {
+            auto rect1 = rects[0];
+            auto rect2 = rects[1];
+            auto rect3 = rects[2];
+            auto rect4 = rects[3];
+            cv::Mat region(rect1.height + rect3.height, rect1.width + rect2.width, source.type());
+            cv::Mat r1(region, cv::Rect(          0,            0, rect1.height, rect1.width));
+            cv::Mat r2(region, cv::Rect(rect1.width,            0, rect2.height, rect2.width));
+            cv::Mat r3(region, cv::Rect(          0, rect1.height, rect3.height, rect3.width));
+            cv::Mat r4(region, cv::Rect(rect1.width, rect1.height, rect4.height, rect4.width));
+
+            cv::Mat(source, rect1).copyTo(r1);
+            cv::Mat(source, rect2).copyTo(r2);
+            cv::Mat(source, rect3).copyTo(r3);
+            cv::Mat(source, rect4).copyTo(r4);
+            return region;
+        } else if (rects.size() == 2) {
+            auto rect1 = rects[0];
+            auto rect2 = rects[1];
+
+            if (rect1.x != rect2.x) {
+                cv::Mat region(rect1.height, rect1.width + rect2.width, source.type());
+                cv::Mat r1(region, cv::Rect(          0,            0, rect1.height, rect1.width));
+                cv::Mat r2(region, cv::Rect(rect1.width,            0, rect2.height, rect2.width));
+
+                cv::Mat(source, rect1).copyTo(r1);
+                cv::Mat(source, rect2).copyTo(r2);
+                return region;
+            } else {
+                cv::Mat region(rect1.height + rect2.height, rect1.width, source.type());
+                cv::Mat r1(region, cv::Rect(          0,            0, rect1.height, rect1.width));
+                cv::Mat r2(region, cv::Rect(          0, rect1.height, rect2.height, rect2.width));
+
+                cv::Mat(source, rect1).copyTo(r1);
+                cv::Mat(source, rect2).copyTo(r2);
+                return region;
+            }
+        }
+        return cv::Mat(source, rects[0]);
+    }
+
+
 public:
     /**
      * Empty constructor.
      */
-    ObjectDetector() {
+    ObjectDetector() : exportEnable(false) {
     }
 
     /**
      * Empty destructor.
      */
     virtual ~ObjectDetector() {
+    }
+
+
+    /**
+     * Enable detected object export.
+     *
+     * \param path target path for image files
+     * \param suffix image file suffix (such as '.png')
+     */
+    virtual void setObjectExport(const std::string &path, const std::string &suffix) {
+        this->exportEnable = true;
+        this->exportPath = path;
+        this->exportSuffix = suffix;
+    }
+
+    /**
+     * Export detected objects.
+     *
+     * \param source source image to scan for objects
+     * \param objects list of detected objects
+     */
+    virtual void exportObjects(const cv::Mat &source, const std::list<DetectedObject> &objects) {
+        if (this->exportEnable) {
+            // export objects
+            std::for_each(objects.begin(), objects.end(), [&] (const DetectedObject &object) {
+                char filename[1024];
+                auto doubleToBits = [] (double value) {
+                    const unsigned char *ptr = (const unsigned char *)&value;
+                    unsigned char v1 = ptr[0] ^ ptr[4];
+                    unsigned char v2 = ptr[1] ^ ptr[5];
+                    unsigned char v3 = ptr[2] ^ ptr[6];
+                    unsigned char v4 = ptr[3] ^ ptr[7];
+
+                    return (v1 << 24 | v2 << 16 | v3 << 8 | v4);
+                };
+                struct timespec ts;
+                unsigned int hash1 = 11;
+                unsigned int hash2 = 11;
+
+                memset(&ts, 0, sizeof(struct timespec));
+                clock_gettime(CLOCK_MONOTONIC, &ts);
+
+                hash1 = hash1 * 31 + doubleToBits(object.area.p1.x);
+                hash1 = hash1 * 31 + doubleToBits(object.area.p1.y);
+                hash2 = hash2 * 31 + doubleToBits(object.area.p2.x);
+                hash2 = hash2 * 31 + doubleToBits(object.area.p2.y);
+
+                snprintf(filename, sizeof(filename), "%s_%08X_%08X_%lu.%lu", object.className.c_str(), hash1, hash2, ts.tv_sec, ts.tv_nsec / 1000l);
+                cv::imwrite(this->exportPath + "/" + filename + this->exportSuffix, this->getObjectRegion(source, object));
+            });
+        }
     }
 
 
@@ -492,8 +612,9 @@ public:
      * Merge overlapping detected objects.
      *
      * \param objects detected objects (input/output)
+     * \param minOverlap minimum overlap to keep objects
      */
-    static void merge(std::list<DetectedObject> &objects) {
+    static void merge(std::list<DetectedObject> &objects, int minOverlap = 1) {
         std::vector<DetectedObject> v(objects.begin(), objects.end());
         std::set<unsigned int> used;
 
@@ -507,6 +628,7 @@ public:
             BoundingBox area(v[i].area);
             std::set<std::string> classNames;
             std::list<DetectedObject> children(v[i].children);
+            int count = 1;
 
             classNames.insert(v[i].className);
             for (unsigned int j = i + 1; j < v.size(); j++) {
@@ -517,22 +639,31 @@ public:
                     classNames.insert(v[j].className);
                     children.insert(children.end(), v[j].children.begin(), v[j].children.end());
                     used.insert(j);
+                    count++;
                     j = i;
                 }
             }
 
-            std::string className;
+            std::function<void(const DetectedObject &)> childCounter = [&] (const DetectedObject &child) {
+                count++;
+                std::for_each(child.children.begin(), child.children.end(), childCounter);
+            };
+            std::for_each(children.begin(), children.end(), childCounter);
 
-            for (auto it = classNames.begin(); it != classNames.end(); ++it) {
-                if (!className.empty()) {
-                    className.append(":");
+            if (count >= minOverlap) {
+                std::string className;
+
+                for (auto it = classNames.begin(); it != classNames.end(); ++it) {
+                    if (!className.empty()) {
+                        className.append(":");
+                    }
+                    className.append(*it);
                 }
-                className.append(*it);
+
+                ObjectDetector::merge(children);
+
+                objects.push_back(DetectedObject(className, area, children));
             }
-
-            ObjectDetector::merge(children);
-
-            objects.push_back(DetectedObject(className, area, children));
         }
     }
 };

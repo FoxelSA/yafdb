@@ -41,20 +41,23 @@ cascades.
 
     General options:
 
-    --algorithm algo: algorithm to use for object detection ('haar')
+    --algorithm algo : algorithm to use for object detection ('haar')
+    --export-path folder/ : set exported object image path
+    --export-format png : set exported object image format ('png', 'jpeg', 'tiff')
 
     Gnomonic projection options:
 
-    --gnomonic: activate task
-    --gnomonic-width 256: projection window width
-    --gnomonic-aperture-x 30: horizontal projection aperture
-    --gnomonic-aperture-y 30: vertical projection aperture
+    --gnomonic : activate task
+    --gnomonic-width 2048 : projection window width
+    --gnomonic-aperture-x 60 : horizontal projection aperture
+    --gnomonic-aperture-y 60 : vertical projection aperture
 
     Haar-cascades options:
 
-    --haar-model class:file.xml: haar model file with class name (allowed multiple times)
-    --haar-scale 1.1: haar reduction scale factor
-    --haar-min-overlap 5: haar minimum detection overlap
+    --haar-model class:file.xml[:minChild:maxChild] : parent haar model file with class name (allowed multiple times)
+    --haar-model class:file.xml:parentclass[:min:max] : child haar model file with class name (allowed multiple times)
+    --haar-scale 1.1 : haar reduction scale factor
+    --haar-min-overlap 3 : haar minimum detection overlap
 
 
 #### Object preview
@@ -62,6 +65,11 @@ cascades.
     yafdb-preview input-image.tiff input-objects.yml
 
     Preview detected objects in source image.
+
+    General options:
+
+    --merge-disable: don't merge overlapping rectangles
+    --merge-min-overlap 1 : minimum occurrence of overlap to keep detected objects
 
 
 #### Object blurring
@@ -72,11 +80,12 @@ cascades.
 
     General options:
 
-    --algorithm algo: algorithm to use for blurring ('gaussian')
+    --algorithm algo : algorithm to use for blurring ('gaussian')
+    --merge-min-overlap 1 : minimum occurrence of overlap to keep detected objects
 
     Gaussian options:
 
-    --gaussian-kernel 65: gaussian kernel size
+    --gaussian-kernel 65 : gaussian kernel size
 
 
 #### Performance validation
@@ -89,6 +98,8 @@ cascades.
 
     General options:
 
+    --merge-disable: don't merge overlapping rectangles
+    --merge-min-overlap 1 : minimum occurrence of overlap to keep detected objects
     --preview input-image.tiff: preview detection errors
 
 
