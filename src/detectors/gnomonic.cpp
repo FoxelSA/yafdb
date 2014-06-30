@@ -54,7 +54,7 @@ bool GnomonicProjectionDetector::detect(const cv::Mat &source, std::list<Detecte
     cv::Mat window(this->height, this->width, source.type());
 
     // scan the whole source image in eqr projection
-    for (double y = M_PI / 2; y > -M_PI / 2; y -= this->hay) {
+    for (double y = M_PI / 2; y >= -M_PI / 2; y -= this->hay) {
         for (double x = 0; x < 2 * M_PI; x += this->hax) {
             // gnomonic projection of current area
             GnomonicTransform transform(window.cols, window.rows, this->ax, this->ay, x, y);
