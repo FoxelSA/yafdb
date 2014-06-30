@@ -41,12 +41,6 @@
 #define __YAFDB_DETECTORS_DETECTOR_H_INCLUDE__
 
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <memory.h>
-#include <time.h>
-#include <sys/stat.h>
-
 #include <bitset>
 #include <list>
 #include <memory>
@@ -54,9 +48,6 @@
 #include <vector>
 
 #include <opencv2/opencv.hpp>
-
-
-#define CLAMP(x, a, b)  MIN(MAX(a, x), b)
 
 
 /**
@@ -140,14 +131,7 @@ public:
      *
      * \param node storage node to read from
      */
-    BoundingBox(const cv::FileNode &node) {
-        int system;
-
-        node["system"] >> system;
-        node["p1"] >> this->p1;
-        node["p2"] >> this->p2;
-        this->system = (CoordinateSystem)system;
-    }
+    BoundingBox(const cv::FileNode &node);
 
 
     /**
@@ -155,13 +139,21 @@ public:
      *
      * \param fs storage to write to
      */
-    void write(cv::FileStorage &fs) const {
-        fs << "{";
-            fs << "system" << (int)this->system;
-            fs << "p1" << this->p1;
-            fs << "p2" << this->p2;
-        fs << "}";
-    }
+    void write(cv::FileStorage &fs) const;
+
+    /**
+     * Get box width.
+     *
+     * \return box width
+     */
+    double width() const;
+
+    /**
+     * Get box height.
+     *
+     * \return box height
+     */
+    double height() const;
 
     /**
      * Move coordinates.
@@ -169,12 +161,7 @@ public:
      * \param x x-axis translation
      * \param y y-axis translation
      */
-    void move(double x, double y) {
-        this->p1.x += x;
-        this->p1.y += y;
-        this->p2.x += x;
-        this->p2.y += y;
-    }
+    void move(double x, double y);
 
     /**
      * Check if other bounding box overlap, and if yes, merge other area
@@ -183,86 +170,7 @@ public:
      * \param other other bounding box
      * \return true if overlap detected, false otherwise
      */
-    bool mergeIfOverlap(const BoundingBox &other) {
-        double ax1 = this->p1.x;
-        double bx1 = other.p1.x;
-        double ay1 = this->p1.y;
-        double by1 = other.p1.y;
-        double ax2 = this->p2.x;
-        double bx2 = other.p2.x;
-        double ay2 = this->p2.y;
-        double by2 = other.p2.y;
-
-        switch (this->system) {
-        case CARTESIAN:
-            if (ax1 > bx2 || ax2 < bx1 ||
-                ay1 > by2 || ay2 < by1) {
-                return false;
-            }
-
-            ax1 = MIN(ax1, bx1);
-            ay1 = MIN(ay1, by1);
-            ax2 = MAX(ax2, bx2);
-            ay2 = MAX(ay2, by2);
-
-            this->p1.x = ax1;
-            this->p1.y = ay1;
-            this->p2.x = ax2;
-            this->p2.y = ay2;
-            return true;
-
-        case SPHERICAL:
-            {
-                double maxx = ax1;
-                double maxy = ay1;
-
-                maxx = MAX(maxx, bx1);
-                maxx = MAX(maxx, ax2);
-                maxx = MAX(maxx, bx2);
-                maxy = MAX(maxy, by1);
-                maxy = MAX(maxy, ay2);
-                maxy = MAX(maxy, by2);
-
-                if (this->p1.x > this->p2.x) {
-                    ax2 += maxx;
-                }
-                if (other.p1.x > other.p2.x) {
-                    bx2 += maxx;
-                }
-                if (this->p1.y > this->p2.y) {
-                    ay2 += maxy;
-                }
-                if (other.p1.y > other.p2.y) {
-                    by2 += maxy;
-                }
-
-                if (ax1 > bx2 || ax2 < bx1 ||
-                    ay1 > by2 || ay2 < by1) {
-                    return false;
-                }
-
-                ax1 = MIN(ax1, bx1);
-                ay1 = MIN(ay1, by1);
-                ax2 = MAX(ax2, bx2);
-                ay2 = MAX(ay2, by2);
-
-                this->p1.x = ax1;
-                this->p1.y = ay1;
-                if (this->p1.x > this->p2.x) {
-                    this->p2.x = ax2 - maxx;
-                } else {
-                    this->p2.x = ax2;
-                }
-                if (this->p1.y > this->p2.y) {
-                    this->p2.y = ay2 - maxy;
-                } else {
-                    this->p2.y = ay2;
-                }
-            }
-            return true;
-        }
-        return false;
-    }
+    bool mergeIfOverlap(const BoundingBox &other);
 
     /**
      * Convert bounding box to opencv rectangle(s). If the coordinate system is
@@ -272,49 +180,126 @@ public:
      * \param height target image height
      * \return opencv rectangle(s)
      */
-    std::vector<cv::Rect> rects(int width, int height) const {
-        std::vector<cv::Rect> v;
+    std::vector<cv::Rect> rects(int width, int height) const;
+};
 
-        switch (this->system) {
-        case CARTESIAN:
-            {
-                int x1 = CLAMP((int)this->p1.x, 0, width);
-                int y1 = CLAMP((int)this->p1.y, 0, height);
-                int x2 = CLAMP((int)this->p2.x, 0, width);
-                int y2 = CLAMP((int)this->p2.y, 0, height);
 
-                v.push_back(cv::Rect(x1, y1, x2 - x1, y2 - y1));
-            }
-            break;
+class GnomonicTransform {
+protected:
+    /** Width in pixels of gnomonic projection */
+    int gnomonic_width;
 
-        case SPHERICAL:
-            {
-                int x1 = (int)(this->p1.x / (2 * M_PI) * width);
-                int y1 = (int)((this->p1.y + M_PI / 2) / M_PI * height);
-                int x2 = (int)(this->p2.x / (2 * M_PI) * width);
-                int y2 = (int)((this->p2.y + M_PI / 2) / M_PI * height);
+    /** Height in pixels of gnomonic projection */
+    int gnomonic_height;
 
-                if (x1 > x2) {
-                    if (y1 > y2) {
-                        v.push_back(cv::Rect(x1, y1, width - x1, height - y2));
-                        v.push_back(cv::Rect(0,  y1,         x2, height - y2));
-                        v.push_back(cv::Rect(x1,  0, width - x1,          y2));
-                        v.push_back(cv::Rect(0,   0,         x2,          y2));
-                    } else {
-                        v.push_back(cv::Rect(x1, y1, width - x1,     y2 - y1));
-                        v.push_back(cv::Rect(0,  y1,         x2,     y2 - y1));
-                    }
-                } else if (y1 > y2) {
-                    v.push_back(cv::Rect(x1, y1, x2 - x1, height - y1));
-                    v.push_back(cv::Rect(x1,  0, x2 - x1,          y2));
-                } else {
-                    v.push_back(cv::Rect(x1, y1, x2 - x1, y2 - y1));
-                }
-            }
-            break;
-        }
-        return v;
+    /** Gnomonic horizontal aperture angle (in radian) */
+    double gnomonic_ax;
+
+    /** Gnomonic vertical aperture angle (in radian) */
+    double gnomonic_ay;
+
+    /** Gnomonic center azimuthal angle (in radian) */
+    double gnomonic_phi;
+
+    /** Gnomonic center polar angle (in radian) */
+    double gnomonic_theta;
+
+    /** Half-aperture angle */
+    double gnomonic_thax;
+
+    /** Half-aperture angle */
+    double gnomonic_thay;
+
+    /** Rotation from eqr to gnomonic */
+    cv::Mat gnomonicRotation;
+
+    /** Rotation from gnomonic to eqr */
+    cv::Mat eqrRotation;
+
+
+public:
+    /**
+     * Empty constructor.
+     *
+     */
+    GnomonicTransform() : gnomonic_width(0), gnomonic_height(0), gnomonic_ax(0), gnomonic_ay(0), gnomonic_phi(0), gnomonic_theta(0), gnomonic_thax(0), gnomonic_thay(0) {
     }
+
+    /**
+     * Default constructor.
+     *
+     * \param gnomonic_width width in pixels of gnomonic projection
+     * \param gnomonic_height height in pixels of gnomonic projection
+     * \param gnomonic_ax gnomonic horizontal aperture angle (in radian)
+     * \param gnomonic_ay gnomonic vertical aperture angle (in radian)
+     * \param gnomonic_phi gnomonic center azimuthal angle (in radian)
+     * \param gnomonic_theta gnomonic center polar angle (in radian)
+     */
+    GnomonicTransform(int gnomonic_width, int gnomonic_height, double gnomonic_ax, double gnomonic_ay, double gnomonic_phi, double gnomonic_theta) : gnomonic_width(0), gnomonic_height(0), gnomonic_ax(0), gnomonic_ay(0), gnomonic_phi(0), gnomonic_theta(0), gnomonic_thax(0), gnomonic_thay(0) {
+        this->setup(gnomonic_width, gnomonic_height, gnomonic_ax, gnomonic_ay, gnomonic_phi, gnomonic_theta);
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * \param ref other transform
+     */
+    GnomonicTransform(const GnomonicTransform &ref) : gnomonic_width(ref.gnomonic_width), gnomonic_height(ref.gnomonic_height), gnomonic_ax(ref.gnomonic_ax), gnomonic_ay(ref.gnomonic_ay), gnomonic_phi(ref.gnomonic_phi), gnomonic_theta(ref.gnomonic_theta), gnomonic_thax(ref.gnomonic_thax), gnomonic_thay(ref.gnomonic_thay), gnomonicRotation(ref.gnomonicRotation), eqrRotation(ref.eqrRotation) {
+    }
+
+
+    /**
+     * Setup gnomonic transformation.
+     *
+     * \param gnomonic_width width in pixels of gnomonic projection
+     * \param gnomonic_height height in pixels of gnomonic projection
+     * \param gnomonic_ax gnomonic horizontal aperture angle (in radian)
+     * \param gnomonic_ay gnomonic vertical aperture angle (in radian)
+     * \param gnomonic_phi gnomonic center azimuthal angle (in radian)
+     * \param gnomonic_theta gnomonic center polar angle (in radian)
+     */
+    void setup(int gnomonic_width, int gnomonic_height, double gnomonic_ax, double gnomonic_ay, double gnomonic_phi, double gnomonic_theta);
+
+
+    /**
+     * Project a point from eqr to gnomonic.
+     *
+     * \param eqr_phi azimuthal angle (in radian)
+     * \param eqr_theta polar angle (in radian)
+     * \param gnomonic_x output x coordinate in gnomonic projection
+     * \param gnomonic_y output y coordinate in gnomonic projection
+     * \return true if projection is conform, false otherwise
+     */
+    bool toGnomonic(double eqr_phi, double eqr_theta, int &gnomonic_x, int &gnomonic_y) const;
+
+    /**
+     * Compute whole gnomonic projection.
+     *
+     * \param src eqr source
+     * \param dst gnomonic target (must be of correct size)
+     */
+    void toGnomonic(const cv::Mat &src, cv::Mat &dst) const;
+
+
+    /**
+     * Project a point from gnomonic to eqr.
+     *
+     * \param gnomonic_x x coordinate in gnomonic projection
+     * \param gnomonic_y y coordinate in gnomonic projection
+     * \param eqr_phi output azimuthal angle (in radian)
+     * \param eqr_theta output polar angle (in radian)
+     * \return true if projection is conform, false otherwise
+     */
+    bool toEqr(int gnomonic_x, int gnomonic_y, double &eqr_phi, double &eqr_theta) const;
+
+    /**
+     * Project a point from gnomonic to eqr.
+     *
+     * \param src gnomonic area
+     * \param dst eqr area
+     * \return true if projection is conform, false otherwise
+     */
+    bool toEqr(const BoundingBox &src, BoundingBox &dst) const;
 };
 
 
@@ -370,13 +355,7 @@ public:
      *
      * \param node storage node to read from
      */
-    DetectedObject(const cv::FileNode &node) : className(node["className"]), area(node["area"]) {
-        auto childrenNode = node["children"];
-
-        for (auto it = childrenNode.begin(); it != childrenNode.end(); ++it) {
-            this->children.push_back(*it);
-        }
-    }
+    DetectedObject(const cv::FileNode &node);
 
 
     /**
@@ -384,38 +363,21 @@ public:
      *
      * \param fs storage to write to
      */
-    void write(cv::FileStorage &fs) const {
-        fs << "{";
-            fs << "className" << this->className;
-            fs << "area";
-            this->area.write(fs);
-            if (!this->children.empty()) {
-                fs << "children" << "[";
-                    for (auto it = this->children.begin(); it != this->children.end(); ++it) {
-                        (*it).write(fs);
-                    }
-                fs << "]";
-            }
-        fs << "}";
-    }
+    void write(cv::FileStorage &fs) const;
 
     /**
      * Add a child detection.
      *
      * \param child child object
      */
-    void addChild(const DetectedObject &child) {
-        this->children.push_back(child);
-    }
+    void addChild(const DetectedObject &child);
 
     /**
      * Add children detection.
      *
      * \param children child objects
      */
-    void addChildren(const std::list<DetectedObject> &children) {
-        this->children.insert(this->children.end(), children.begin(), children.end());
-    }
+    void addChildren(const std::list<DetectedObject> &children);
 
     /**
      * Move object coordinates.
@@ -423,12 +385,30 @@ public:
      * \param x x-axis translation
      * \param y y-axis translation
      */
-    void move(double x, double y) {
-        this->area.move(x, y);
-        for (auto it = this->children.begin(); it != this->children.end(); ++it) {
-            (*it).move(x, y);
-        }
-    }
+    void move(double x, double y);
+
+    /**
+     * Get detected object region.
+     *
+     * \param source source image
+     * \param offset output image offset in source image
+     * \param rect output rectangle of object in returned image
+     * \param borderSize extra border size
+     * \return detected object region
+     */
+    cv::Mat getRegion(const cv::Mat &source, cv::Point &offset, cv::Rect &rect, int borderSize = 0) const;
+
+    /**
+     * Get detected object region in gnomonic projection.
+     *
+     * \param source source image (in eqr projection)
+     * \param transform output gnomonic transform
+     * \param rect output rectangle of object in returned image
+     * \param gnomonicWidth width of gnomonic image
+     * \param extraAperture extra aperture angle (in radian)
+     * \return detected object region (in gnomonic projection)
+     */
+    cv::Mat getGnomonicRegion(const cv::Mat &source, GnomonicTransform &transform, cv::Rect &rect, int gnomonicWidth = 1024, double extraAperture = 0.0) const;
 };
 
 
@@ -446,58 +426,6 @@ protected:
 
     /** Object export filename suffix */
     std::string exportSuffix;
-
-
-    /**
-     * Get detected object region.
-     *
-     * \param source source image to scan for objects
-     * \param object detected object
-     * \return detected object region
-     */
-    cv::Mat getObjectRegion(const cv::Mat &source, const DetectedObject &object) {
-        auto rects = object.area.rects(source.cols, source.rows);
-
-        if (rects.size() == 4) {
-            auto rect1 = rects[0];
-            auto rect2 = rects[1];
-            auto rect3 = rects[2];
-            auto rect4 = rects[3];
-            cv::Mat region(rect1.height + rect3.height, rect1.width + rect2.width, source.type());
-            cv::Mat r1(region, cv::Rect(          0,            0, rect1.height, rect1.width));
-            cv::Mat r2(region, cv::Rect(rect1.width,            0, rect2.height, rect2.width));
-            cv::Mat r3(region, cv::Rect(          0, rect1.height, rect3.height, rect3.width));
-            cv::Mat r4(region, cv::Rect(rect1.width, rect1.height, rect4.height, rect4.width));
-
-            cv::Mat(source, rect1).copyTo(r1);
-            cv::Mat(source, rect2).copyTo(r2);
-            cv::Mat(source, rect3).copyTo(r3);
-            cv::Mat(source, rect4).copyTo(r4);
-            return region;
-        } else if (rects.size() == 2) {
-            auto rect1 = rects[0];
-            auto rect2 = rects[1];
-
-            if (rect1.x != rect2.x) {
-                cv::Mat region(rect1.height, rect1.width + rect2.width, source.type());
-                cv::Mat r1(region, cv::Rect(          0,            0, rect1.height, rect1.width));
-                cv::Mat r2(region, cv::Rect(rect1.width,            0, rect2.height, rect2.width));
-
-                cv::Mat(source, rect1).copyTo(r1);
-                cv::Mat(source, rect2).copyTo(r2);
-                return region;
-            } else {
-                cv::Mat region(rect1.height + rect2.height, rect1.width, source.type());
-                cv::Mat r1(region, cv::Rect(          0,            0, rect1.height, rect1.width));
-                cv::Mat r2(region, cv::Rect(          0, rect1.height, rect2.height, rect2.width));
-
-                cv::Mat(source, rect1).copyTo(r1);
-                cv::Mat(source, rect2).copyTo(r2);
-                return region;
-            }
-        }
-        return cv::Mat(source, rects[0]);
-    }
 
 
 public:
@@ -520,11 +448,7 @@ public:
      * \param path target path for image files
      * \param suffix image file suffix (such as '.png')
      */
-    virtual void setObjectExport(const std::string &path, const std::string &suffix) {
-        this->exportEnable = true;
-        this->exportPath = path;
-        this->exportSuffix = suffix;
-    }
+    virtual void setObjectExport(const std::string &path, const std::string &suffix);
 
     /**
      * Export detected objects.
@@ -532,47 +456,14 @@ public:
      * \param source source image to scan for objects
      * \param objects list of detected objects
      */
-    virtual void exportObjects(const cv::Mat &source, const std::list<DetectedObject> &objects) {
-        if (this->exportEnable) {
-            // export objects
-            std::for_each(objects.begin(), objects.end(), [&] (const DetectedObject &object) {
-                char filename[1024];
-                auto doubleToBits = [] (double value) {
-                    const unsigned char *ptr = (const unsigned char *)&value;
-                    unsigned char v1 = ptr[0] ^ ptr[4];
-                    unsigned char v2 = ptr[1] ^ ptr[5];
-                    unsigned char v3 = ptr[2] ^ ptr[6];
-                    unsigned char v4 = ptr[3] ^ ptr[7];
-
-                    return (v1 << 24 | v2 << 16 | v3 << 8 | v4);
-                };
-                struct timespec ts;
-                unsigned int hash1 = 11;
-                unsigned int hash2 = 11;
-
-                memset(&ts, 0, sizeof(struct timespec));
-                clock_gettime(CLOCK_MONOTONIC, &ts);
-
-                hash1 = hash1 * 31 + doubleToBits(object.area.p1.x);
-                hash1 = hash1 * 31 + doubleToBits(object.area.p1.y);
-                hash2 = hash2 * 31 + doubleToBits(object.area.p2.x);
-                hash2 = hash2 * 31 + doubleToBits(object.area.p2.y);
-
-                snprintf(filename, sizeof(filename), "%s_%08X_%08X_%lu.%lu", object.className.c_str(), hash1, hash2, ts.tv_sec, ts.tv_nsec / 1000l);
-                cv::imwrite(this->exportPath + "/" + filename + this->exportSuffix, this->getObjectRegion(source, object));
-            });
-        }
-    }
-
+    virtual void exportObjects(const cv::Mat &source, const std::list<DetectedObject> &objects) const;
 
     /**
      * Check if this object detector supports color images.
      *
      * \return true if detector works with color images, false otherwise.
      */
-    virtual bool supportsColor() const {
-        return true;
-    }
+    virtual bool supportsColor() const;
 
     /*
      * Execute object detector against given image.
@@ -581,9 +472,7 @@ public:
      * \param objects output list of detected objects
      * \return true on success, false otherwise
      */
-    virtual bool detect(const cv::Mat &source, std::list<DetectedObject> &objects) {
-        return false;
-    }
+    virtual bool detect(const cv::Mat &source, std::list<DetectedObject> &objects);
 
 
     /**
@@ -593,20 +482,7 @@ public:
      * \param objects output list of detected objects
      * \return true on success, false otherwise
      */
-    static bool load(const std::string &file, std::list<DetectedObject> &objects) {
-        cv::FileStorage fs(file, cv::FileStorage::READ);
-
-        if (!fs.isOpened()) {
-            return false;
-        }
-
-        auto objectsNode = fs["objects"];
-
-        for (auto it = objectsNode.begin(); it != objectsNode.end(); ++it) {
-            objects.push_back(*it);
-        }
-        return true;
-    }
+    static bool load(const std::string &file, std::list<DetectedObject> &objects);
 
     /**
      * Merge overlapping detected objects.
@@ -614,58 +490,7 @@ public:
      * \param objects detected objects (input/output)
      * \param minOverlap minimum overlap to keep objects
      */
-    static void merge(std::list<DetectedObject> &objects, int minOverlap = 1) {
-        std::vector<DetectedObject> v(objects.begin(), objects.end());
-        std::set<unsigned int> used;
-
-        objects.clear();
-        for (unsigned int i = 0; i < v.size(); i++) {
-            if (used.find(i) != used.end()) {
-                continue;
-            }
-            used.insert(i);
-
-            BoundingBox area(v[i].area);
-            std::set<std::string> classNames;
-            std::list<DetectedObject> children(v[i].children);
-            int count = 1;
-
-            classNames.insert(v[i].className);
-            for (unsigned int j = i + 1; j < v.size(); j++) {
-                if (used.find(j) != used.end()) {
-                    continue;
-                }
-                if (area.mergeIfOverlap(v[j].area)) {
-                    classNames.insert(v[j].className);
-                    children.insert(children.end(), v[j].children.begin(), v[j].children.end());
-                    used.insert(j);
-                    count++;
-                    j = i;
-                }
-            }
-
-            std::function<void(const DetectedObject &)> childCounter = [&] (const DetectedObject &child) {
-                count++;
-                std::for_each(child.children.begin(), child.children.end(), childCounter);
-            };
-            std::for_each(children.begin(), children.end(), childCounter);
-
-            if (count >= minOverlap) {
-                std::string className;
-
-                for (auto it = classNames.begin(); it != classNames.end(); ++it) {
-                    if (!className.empty()) {
-                        className.append(":");
-                    }
-                    className.append(*it);
-                }
-
-                ObjectDetector::merge(children);
-
-                objects.push_back(DetectedObject(className, area, children));
-            }
-        }
-    }
+    static void merge(std::list<DetectedObject> &objects, int minOverlap = 1);
 };
 
 

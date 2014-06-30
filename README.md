@@ -72,6 +72,23 @@ cascades.
     --merge-min-overlap 1 : minimum occurrence of overlap to keep detected objects
 
 
+#### Object validation
+
+    yafdb-validate input-image.tiff input-objects.yml output-objects.yml
+
+    Validate detected objects in source image.
+
+    General options:
+
+    --merge-disable: don't merge overlapping rectangles
+    --merge-min-overlap 1 : minimum occurrence of overlap to keep detected objects
+    --auto-validate : enable auto-validation instead of manual validation
+
+    Gnomonic projection options:
+
+    --gnomonic : activate gnomonic reprojection for visualization
+
+
 #### Object blurring
 
     yafdb-blur --algorithm algo input-image.tiff input-objects.yml output-image.tiff

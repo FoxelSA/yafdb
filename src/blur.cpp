@@ -117,6 +117,7 @@ int main(int argc, char **argv) {
                 usage();
                 return 1;
             }
+
             source_file = argv[optind++];
             if (access(source_file, R_OK)) {
                 fprintf(stderr, "Error: source file not readable: %s\n", source_file);

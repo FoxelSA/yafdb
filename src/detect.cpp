@@ -43,6 +43,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <getopt.h>
+#include <sys/stat.h>
 
 #include "detectors/detector.hpp"
 #include "detectors/multi.hpp"

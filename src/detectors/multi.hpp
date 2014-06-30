@@ -75,11 +75,7 @@ public:
      *
      * \param detector pointer to detector to add
      */
-    MultiObjectDetector* addDetector(const std::shared_ptr<ObjectDetector> &detector) {
-        this->detectors.push_back(detector);
-        return this;
-    }
-
+    MultiObjectDetector* addDetector(const std::shared_ptr<ObjectDetector> &detector);
 
     /**
      * Enable detected object export.
@@ -87,23 +83,14 @@ public:
      * \param path target path for image files
      * \param suffix image file suffix (such as '.png')
      */
-    virtual void setObjectExport(const std::string &path, const std::string &suffix) {
-        std::for_each(this->detectors.begin(), this->detectors.end(), [&] (const std::shared_ptr<ObjectDetector> &detector) {
-            detector->setObjectExport(path, suffix);
-        });
-    }
-
+    virtual void setObjectExport(const std::string &path, const std::string &suffix);
 
     /**
      * Check if this object detector supports color images.
      *
      * \return true if detector works with color images, false otherwise.
      */
-    virtual bool supportsColor() const {
-        return std::any_of(this->detectors.begin(), this->detectors.end(), [] (const std::shared_ptr<ObjectDetector> &detector) {
-            return detector->supportsColor();
-        });
-    }
+    virtual bool supportsColor() const;
 
     /*
      * Execute object detector against given image.
@@ -112,20 +99,7 @@ public:
      * \param objects output list of detected objects
      * \return true on success, false otherwise
      */
-    virtual bool detect(const cv::Mat &source, std::list<DetectedObject> &objects) {
-        cv::Mat graySource(source);
-
-        return std::all_of(this->detectors.begin(), this->detectors.end(), [&] (const std::shared_ptr<ObjectDetector> &detector) {
-            if (!detector->supportsColor()) {
-                if (graySource.channels() != 1) {
-                    cv::cvtColor(source, graySource, cv::COLOR_RGB2GRAY);
-                    // cv::equalizeHist(graySource, graySource);
-                }
-                return detector->detect(graySource, objects);
-            }
-            return detector->detect(source, objects);
-        });
-    }
+    virtual bool detect(const cv::Mat &source, std::list<DetectedObject> &objects);
 };
 
 

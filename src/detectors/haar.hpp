@@ -94,9 +94,7 @@ public:
      *
      * \return true if detector works with color images, false otherwise.
      */
-    virtual bool supportsColors() const {
-        return false;
-    }
+    virtual bool supportsColors() const;
 
     /*
      * Execute object detector against given image.
@@ -105,21 +103,7 @@ public:
      * \param objects output list of detected objects
      * \return true on success, false otherwise
      */
-    virtual bool detect(const cv::Mat &source, std::list<DetectedObject> &objects) {
-        std::list<DetectedObject> localObjects;
-        std::vector<cv::Rect> rects;
-
-        this->classifier.detectMultiScale(source, rects, this->scaleFactor, this->minOverlap, 0, cv::Size(10, 10), cv::Size());
-        std::for_each(rects.begin(), rects.end(), [&] (const cv::Rect &rect) {
-            localObjects.push_back(DetectedObject(this->className, rect));
-        });
-
-        // export objects if enabled
-        this->exportObjects(source, localObjects);
-
-        objects.insert(objects.end(), localObjects.begin(), localObjects.end());
-        return true;
-    }
+    virtual bool detect(const cv::Mat &source, std::list<DetectedObject> &objects);
 };
 
 

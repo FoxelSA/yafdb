@@ -46,6 +46,7 @@
 
 #include "detectors/detector.hpp"
 
+
 /*
  * Program arguments.
  *
@@ -99,6 +100,7 @@ int main(int argc, char **argv) {
                 usage();
                 return 1;
             }
+
             source_file = argv[optind++];
             if (access(source_file, R_OK)) {
                 fprintf(stderr, "Error: source file not readable: %s\n", source_file);
@@ -177,6 +179,6 @@ int main(int argc, char **argv) {
 
     cv::namedWindow("preview", cv::WINDOW_NORMAL);
     cv::imshow("preview", source);
-    while (cv::waitKey(0) != '\n');
+    while ((cv::waitKey(0) & 0xff) != '\n');
     return 0;
 }
