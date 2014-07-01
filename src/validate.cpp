@@ -218,12 +218,12 @@ int main(int argc, char **argv) {
         };
         std::function<void(int, int, int, int)> mouseHandler = [&] (int event, int x, int y, int button) {
             switch (event) {
-            case CV_EVENT_LBUTTONDOWN:
+            case cv::EVENT_LBUTTONDOWN:
                 rect.x = x;
                 rect.y = y;
                 draw();
                 break;
-            case CV_EVENT_RBUTTONDOWN:
+            case cv::EVENT_RBUTTONDOWN:
                 rect.width = x - rect.x;
                 rect.height = y - rect.y;
                 draw();
@@ -363,7 +363,7 @@ int main(int argc, char **argv) {
             };
 
             switch (event) {
-            case CV_EVENT_LBUTTONDOWN:
+            case cv::EVENT_LBUTTONDOWN:
                 coordinates[0].x = x;
                 coordinates[0].y = y;
 
@@ -382,7 +382,7 @@ int main(int argc, char **argv) {
                 }
                 break;
 
-            case CV_EVENT_RBUTTONDOWN:
+            case cv::EVENT_RBUTTONDOWN:
                 coordinates[1].x = x;
                 coordinates[1].y = y;
 
