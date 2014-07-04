@@ -224,8 +224,8 @@ int main(int argc, char **argv) {
                 draw();
                 break;
             case cv::EVENT_RBUTTONDOWN:
-                rect.width = x - rect.x;
-                rect.height = y - rect.y;
+                rect.width = MAX(x - rect.x, 1);
+                rect.height = MAX(y - rect.y, 1);
                 draw();
                 break;
             }
@@ -416,7 +416,15 @@ int main(int argc, char **argv) {
                     });
                     editObjects.clear();
                 } else {
-                    insertObject(coordinates[0], coordinates[1]);
+                    cv::Point2i p1(
+                        MIN(coordinates[0].x, coordinates[1].x),
+                        MIN(coordinates[0].y, coordinates[1].y)
+                    );
+                    cv::Point2i p2(
+                        MAX(coordinates[0].x, coordinates[1].x),
+                        MAX(coordinates[0].y, coordinates[1].y)
+                    );
+                    insertObject(p1, p2);
                 }
                 cv::setMouseCallback("preview", mouseCallback, &mouseHandler);
                 draw();
