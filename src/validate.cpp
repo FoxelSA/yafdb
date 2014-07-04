@@ -303,6 +303,7 @@ int main(int argc, char **argv) {
         std::list<DetectedObject> editObjects;
         std::list<DetectedObject> invalidateObjects;
         cv::Point2i coordinates[2];
+        bool leftClick = false;
         bool done = false;
         bool edit = false;
         auto draw = [&] () {
@@ -342,16 +343,18 @@ int main(int argc, char **argv) {
                     DetectedObject &object = *it;
                     bool xok = false;
                     bool yok = false;
+                    double xeps = gnomonic_enabled ? 1.0 * M_PI / 180.0 : 10;
+                    double yeps = gnomonic_enabled ? 0.5 * M_PI / 180.0 : 10;
 
                     if (object.area.p1.x <= object.area.p2.x) {
-                        xok = p.x >= object.area.p1.x && p.x <= object.area.p2.x;
+                        xok = p.x + xeps >= object.area.p1.x && p.x - xeps <= object.area.p2.x;
                     } else {
-                        xok = p.x >= object.area.p1.x || p.x <= object.area.p2.x;
+                        xok = p.x + xeps >= object.area.p1.x || p.x - xeps <= object.area.p2.x;
                     }
                     if (object.area.p1.x <= object.area.p2.x) {
-                        yok = p.y >= object.area.p1.y && p.y <= object.area.p2.y;
+                        yok = p.y + yeps >= object.area.p1.y && p.y - yeps <= object.area.p2.y;
                     } else {
-                        yok = p.y >= object.area.p1.y || p.y <= object.area.p2.y;
+                        yok = p.y + yeps >= object.area.p1.y || p.y - yeps <= object.area.p2.y;
                     }
 
                     if (xok && yok) {
@@ -378,7 +381,10 @@ int main(int argc, char **argv) {
                 selectObjects(validObjects);
                 selectObjects(userObjects);
                 if (editObjects.size() > 0) {
+                    leftClick = false;
                     edit = true;
+                } else {
+                    leftClick = true;
                 }
                 break;
 
@@ -396,10 +402,13 @@ int main(int argc, char **argv) {
                 selectObjects(validObjects);
                 selectObjects(userObjects);
                 if (editObjects.size() > 0) {
+                    leftClick = false;
+
                     invalidObjects.insert(invalidObjects.end(), editObjects.begin(), editObjects.end());
                     editObjects.clear();
                     draw();
-                } else {
+                } else if (leftClick) {
+                    leftClick = false;
                     edit = true;
                 }
                 break;
@@ -421,9 +430,10 @@ int main(int argc, char **argv) {
                         MIN(coordinates[0].y, coordinates[1].y)
                     );
                     cv::Point2i p2(
-                        MAX(coordinates[0].x, coordinates[1].x),
-                        MAX(coordinates[0].y, coordinates[1].y)
+                        MAX(MAX(coordinates[0].x, coordinates[1].x), p1.x + 1),
+                        MAX(MAX(coordinates[0].y, coordinates[1].y), p1.y + 1)
                     );
+
                     insertObject(p1, p2);
                 }
                 cv::setMouseCallback("preview", mouseCallback, &mouseHandler);
