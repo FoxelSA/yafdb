@@ -518,47 +518,6 @@ cv::Mat DetectedObject::getGnomonicRegion(const cv::Mat &source, GnomonicTransfo
     return window;
 }
 
-
-void ObjectDetector::setObjectExport(const std::string &path, const std::string &suffix) {
-    this->exportEnable = true;
-    this->exportPath = path;
-    this->exportSuffix = suffix;
-}
-
-void ObjectDetector::exportObjects(const cv::Mat &source, const std::list<DetectedObject> &objects) const {
-    if (this->exportEnable) {
-        // export objects
-        std::for_each(objects.begin(), objects.end(), [&] (const DetectedObject &object) {
-            char filename[1024];
-            auto doubleToBits = [] (double value) {
-                const unsigned char *ptr = (const unsigned char *)&value;
-                unsigned char v1 = ptr[0] ^ ptr[4];
-                unsigned char v2 = ptr[1] ^ ptr[5];
-                unsigned char v3 = ptr[2] ^ ptr[6];
-                unsigned char v4 = ptr[3] ^ ptr[7];
-
-                return (v1 << 24 | v2 << 16 | v3 << 8 | v4);
-            };
-            struct timespec ts;
-            unsigned int hash1 = 11;
-            unsigned int hash2 = 11;
-            cv::Rect rect;
-            cv::Point offset;
-
-            memset(&ts, 0, sizeof(struct timespec));
-            clock_gettime(CLOCK_MONOTONIC, &ts);
-
-            hash1 = hash1 * 31 + doubleToBits(object.area.p1.x);
-            hash1 = hash1 * 31 + doubleToBits(object.area.p1.y);
-            hash2 = hash2 * 31 + doubleToBits(object.area.p2.x);
-            hash2 = hash2 * 31 + doubleToBits(object.area.p2.y);
-
-            snprintf(filename, sizeof(filename), "%s_%08X_%08X_%lu.%lu", object.className.c_str(), hash1, hash2, ts.tv_sec, ts.tv_nsec / 1000l);
-            cv::imwrite(this->exportPath + "/" + filename + this->exportSuffix, object.getRegion(source, offset, rect));
-        });
-    }
-}
-
 bool ObjectDetector::supportsColor() const {
     return true;
 }
@@ -633,4 +592,48 @@ void ObjectDetector::merge(std::list<DetectedObject> &objects, int minOverlap) {
             objects.push_back(DetectedObject(className, area, children));
         }
     }
+}
+
+void ObjectDetector::exportImages(const std::string &exportPath, const std::string &imageSuffix, const cv::Mat &source, const std::list<DetectedObject> &objects) {
+    struct timespec ts;
+    char filename[256];
+    int nextIndex = 0;
+
+    memset(&ts, 0, sizeof(struct timespec));
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+
+    snprintf(filename, sizeof(filename), "%ld_%ld.yaml", ts.tv_sec, ts.tv_nsec / 1000l);
+
+    // export objects
+    cv::FileStorage fs(exportPath + "/" + filename, cv::FileStorage::WRITE);
+
+    fs << "objects";
+    fs << "[";
+    std::for_each(objects.begin(), objects.end(), [&] (const DetectedObject &object) {
+        std::string path(exportPath + "/" + filename + object.className + imageSuffix);
+
+        snprintf(filename, sizeof(filename), "%ld_%ld_%04d", ts.tv_sec, ts.tv_nsec / 1000l, nextIndex);
+        if (object.area.isCartesian()) {
+            cv::Rect rect;
+            cv::Point offset;
+
+            cv::imwrite(path, object.getRegion(source, offset, rect));
+        }
+        if (object.area.isSpherical()) {
+            GnomonicTransform transform;
+            cv::Rect rect;
+
+            cv::imwrite(path, object.getGnomonicRegion(source, transform, rect));
+        }
+
+        fs << "{";
+            fs << "index" << nextIndex;
+            fs << "object";
+            object.write(fs);
+            fs << "path" << path;
+        fs << "}";
+
+        nextIndex++;
+    });
+    fs << "]";
 }

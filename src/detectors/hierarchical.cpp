@@ -45,17 +45,6 @@ HierarchicalObjectDetector* HierarchicalObjectDetector::addChildDetector(const s
     return this;
 }
 
-void HierarchicalObjectDetector::setObjectExport(const std::string &path, const std::string &suffix) {
-    if (this->parent) {
-        this->parent->setObjectExport(path, suffix);
-    }
-    std::for_each(this->children.begin(), this->children.end(), [&] (ObjectDetectorConfig &config) {
-        if (config.detector) {
-            config.detector->setObjectExport(path, suffix);
-        }
-    });
-}
-
 bool HierarchicalObjectDetector::supportsColor() const {
     return (this->parent && this->parent->supportsColor()) ||
         std::any_of(this->children.begin(), this->children.end(), [] (const ObjectDetectorConfig &config) {

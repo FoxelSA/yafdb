@@ -142,6 +142,24 @@ public:
     void write(cv::FileStorage &fs) const;
 
     /**
+     * Check if coordinates are in cartesian system.
+     *
+     * \param return true if coordinates are cartesian
+     */
+    bool isCartesian() const {
+        return this->system == CARTESIAN;
+    }
+
+    /**
+     * Check if coordinates are in spherical system.
+     *
+     * \param return true if coordinates are spherical
+     */
+    bool isSpherical() const {
+        return this->system == SPHERICAL;
+    }
+
+    /**
      * Get box width.
      *
      * \return box width
@@ -417,22 +435,11 @@ public:
  *
  */
 class ObjectDetector {
-protected:
-    /** Enable object export */
-    bool exportEnable;
-
-    /** Object export path */
-    std::string exportPath;
-
-    /** Object export filename suffix */
-    std::string exportSuffix;
-
-
 public:
     /**
      * Empty constructor.
      */
-    ObjectDetector() : exportEnable(false) {
+    ObjectDetector() {
     }
 
     /**
@@ -441,22 +448,6 @@ public:
     virtual ~ObjectDetector() {
     }
 
-
-    /**
-     * Enable detected object export.
-     *
-     * \param path target path for image files
-     * \param suffix image file suffix (such as '.png')
-     */
-    virtual void setObjectExport(const std::string &path, const std::string &suffix);
-
-    /**
-     * Export detected objects.
-     *
-     * \param source source image to scan for objects
-     * \param objects list of detected objects
-     */
-    virtual void exportObjects(const cv::Mat &source, const std::list<DetectedObject> &objects) const;
 
     /**
      * Check if this object detector supports color images.
@@ -476,9 +467,9 @@ public:
 
 
     /**
-     * Load detected objects from yml file.
+     * Load detected objects from yaml file.
      *
-     * \param file yml filename
+     * \param file yaml filename
      * \param objects output list of detected objects
      * \return true on success, false otherwise
      */
@@ -491,6 +482,16 @@ public:
      * \param minOverlap minimum overlap to keep objects
      */
     static void merge(std::list<DetectedObject> &objects, int minOverlap = 1);
+
+    /**
+     * Export detected objects.
+     *
+     * \param exportPath target path for image files and yaml file
+     * \param imageSuffix image file suffix (such as '.png')
+     * \param source source image to scan for objects
+     * \param objects list of detected objects
+     */
+    static void exportImages(const std::string &exportPath, const std::string &imageSuffix, const cv::Mat &source, const std::list<DetectedObject> &objects);
 };
 
 

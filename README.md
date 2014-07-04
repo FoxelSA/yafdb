@@ -35,15 +35,13 @@ cascades.
 
 #### Object detection
 
-    yafdb-detect --algorithm algo input-image.tiff output-objects.yml
+    yafdb-detect --algorithm algo input-image.tiff output-objects.yaml
 
-    Detects objects within input image. Detected objects are written to a yml file.
+    Detects objects within input image. Detected objects are written to a yaml file.
 
     General options:
 
     --algorithm algo : algorithm to use for object detection ('haar')
-    --export-path folder/ : set exported object image path
-    --export-format png : set exported object image format ('png', 'jpeg', 'tiff')
 
     Gnomonic projection options:
 
@@ -60,9 +58,22 @@ cascades.
     --haar-min-overlap 3 : haar minimum detection overlap
 
 
+#### Object export
+
+    yafdb-export input-image.tiff input-objects.yaml output-path/
+
+    Export detected objects from source image into output folder (yaml+images).
+
+    General options:
+
+    --merge-disable: don't merge overlapping rectangles
+    --merge-min-overlap 1 : minimum occurrence of overlap to keep detected objects
+    --format png : set exported object image format ('png', 'jpeg', 'tiff')
+
+
 #### Object preview
 
-    yafdb-preview input-image.tiff input-objects.yml
+    yafdb-preview input-image.tiff input-objects.yaml
 
     Preview detected objects in source image.
 
@@ -74,7 +85,7 @@ cascades.
 
 #### Object validation
 
-    yafdb-validate input-image.tiff input-objects.yml output-objects.yml
+    yafdb-validate input-image.tiff input-objects.yaml output-objects.yaml
 
     Validate detected objects in source image.
 
@@ -91,7 +102,7 @@ cascades.
 
 #### Object blurring
 
-    yafdb-blur --algorithm algo input-image.tiff input-objects.yml output-image.tiff
+    yafdb-blur --algorithm algo input-image.tiff input-objects.yaml output-image.tiff
 
     Blurs detected objects and write modified image as output.
 
@@ -107,7 +118,7 @@ cascades.
 
 #### Performance validation
 
-    yafdb-test input-objects.yml mask-image.png
+    yafdb-test input-objects.yaml mask-image.png
 
     Compute the detection error rate by comparing optimal area given in
     reference bitmap mask (black=none, white=object) to the detected area

@@ -43,8 +43,20 @@
 #include <unistd.h>
 #include <errno.h>
 #include <getopt.h>
+#include <sys/stat.h>
 
 #include "detectors/detector.hpp"
+
+
+/*
+ * List of supported image formats.
+ *
+ */
+
+#define FORMAT_NONE       0
+#define FORMAT_PNG        1
+#define FORMAT_JPEG       2
+#define FORMAT_TIFF       3
 
 
 /*
@@ -54,17 +66,21 @@
 
 #define OPTION_MERGE_DISABLE          0
 #define OPTION_MERGE_MIN_OVERLAP      1
+#define OPTION_FORMAT                 2
 
 
 static int merge_enabled = 1;
 static int merge_min_overlap = 1;
+static int format = FORMAT_PNG;
 static const char *source_file = NULL;
 static const char *objects_file = NULL;
+static const char *output_path = NULL;
 
 
 static struct option options[] = {
-    {"merge-disable",             no_argument,       &merge_enabled,     0 },
-    {"merge-min-overlap",         required_argument, 0,                  0 },
+    {"merge-disable",        no_argument,       &merge_enabled,     0 },
+    {"merge-min-overlap",    required_argument, 0,                  0 },
+    {"format",               required_argument, 0,                  0 },
     {0, 0, 0, 0}
 };
 
@@ -74,13 +90,14 @@ static struct option options[] = {
  *
  */
 void usage() {
-    printf("yafdb-preview input-image.tiff input-objects.yaml\n\n");
+    printf("yafdb-export input-image.tiff input-objects.yaml output-path/\n\n");
 
-    printf("Preview detected objects in source image.\n\n");
+    printf("Export detected objects from source image into output folder (yaml+images).\n\n");
 
     printf("General options:\n\n");
     printf("--merge-disable: don't merge overlapping rectangles\n");
     printf("--merge-min-overlap 1 : minimum occurrence of overlap to keep detected objects\n");
+    printf("--format png : set exported object image format ('png', 'jpeg', 'tiff')\n");
     printf("\n");
 }
 
@@ -96,7 +113,7 @@ int main(int argc, char **argv) {
 
         getopt_long(argc, argv, "", options, &index);
         if (index == -1) {
-            if (argc != optind + 2) {
+            if (argc != optind + 3) {
                 usage();
                 return 1;
             }
@@ -112,6 +129,8 @@ int main(int argc, char **argv) {
                 fprintf(stderr, "Error: detected objects file not readable: %s\n", objects_file);
                 return 2;
             }
+
+            output_path = argv[optind++];
             break;
         }
 
@@ -121,6 +140,20 @@ int main(int argc, char **argv) {
 
         case OPTION_MERGE_MIN_OVERLAP:
             merge_min_overlap = atoi(optarg);
+            break;
+
+        case OPTION_FORMAT:
+            if (strcmp(optarg, "none") == 0) {
+                format = FORMAT_NONE;
+            } else if (strcmp(optarg, "png") == 0) {
+                format = FORMAT_PNG;
+            } else if (strcmp(optarg, "jpeg") == 0) {
+                format = FORMAT_JPEG;
+            } else if (strcmp(optarg, "tiff") == 0) {
+                format = FORMAT_TIFF;
+            } else {
+                fprintf(stderr, "Error: unsupported export format: %s\n", optarg);
+            }
             break;
 
         default:
@@ -150,35 +183,32 @@ int main(int argc, char **argv) {
         ObjectDetector::merge(objects, merge_min_overlap);
     }
 
-    // draw detected objects
-    const int borderSize = 20;
-    cv::Scalar colors[] = {
-        cv::Scalar(0, 255, 255),
-        cv::Scalar(255, 0, 255),
-        cv::Scalar(0, 255, 255),
-        cv::Scalar(0, 0, 255),
-        cv::Scalar(0, 255, 0),
-        cv::Scalar(255, 0, 0)
-    };
-    std::function<void(const DetectedObject&, int)> drawObjectWithDepth = [&] (const DetectedObject &object, int depth) {
-        std::vector<cv::Rect> rects = object.area.rects(source.cols, source.rows);
+    // create export folder
+    std::stringstream stream(output_path);
+    std::string path;
 
-        for (auto it = rects.begin(); it != rects.end(); ++it) {
-            putText(source, object.className, (*it).tl(), CV_FONT_HERSHEY_SIMPLEX, 3, cv::Scalar(255, 255, 255), 3);
-            rectangle(source, *it, colors[depth], borderSize);
+    for (std::string item; std::getline(stream, item, '/'); ) {
+        if (path.length() > 0) {
+            path.append("/");
         }
-        for (auto it = object.children.begin(); it != object.children.end(); ++it) {
-            drawObjectWithDepth(*it, MAX(depth + 1, 5));
-        }
-    };
-    auto drawObject = [&] (const DetectedObject &object) {
-        drawObjectWithDepth(object, 0);
-    };
+        path.append(item);
+        mkdir(path.c_str(), 0755);
+    }
 
-    std::for_each(objects.begin(), objects.end(), drawObject);
-
-    cv::namedWindow("preview", cv::WINDOW_NORMAL);
-    cv::imshow("preview", source);
-    while ((cv::waitKey(0) & 0xff) != '\n');
+    // export detected objects
+    switch (format) {
+    case FORMAT_PNG:
+        ObjectDetector::exportImages(output_path, ".png", source, objects);
+        break;
+    case FORMAT_JPEG:
+        ObjectDetector::exportImages(output_path, ".jpeg", source, objects);
+        break;
+    case FORMAT_TIFF:
+        ObjectDetector::exportImages(output_path, ".tiff", source, objects);
+        break;
+    default:
+        fprintf(stderr, "Error: unsupported export image format!\n");
+        return 3;
+    }
     return 0;
 }

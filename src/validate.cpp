@@ -92,7 +92,7 @@ static struct option options[] = {
  *
  */
 void usage() {
-    printf("yafdb-validate input-image.tiff input-objects.yml output-objects.yml\n\n");
+    printf("yafdb-validate input-image.tiff input-objects.yaml output-objects.yaml\n\n");
 
     printf("Validate detected objects in source image.\n\n");
 

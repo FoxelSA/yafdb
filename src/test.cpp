@@ -75,7 +75,7 @@ static struct option options[] = {
  *
  */
 void usage() {
-    printf("yafdb-test input-objects.yml mask-image.png\n\n");
+    printf("yafdb-test input-objects.yaml mask-image.png\n\n");
 
     printf("Compute the detection error rate by comparing optimal area given in\n");
     printf("reference bitmap mask (black=none, white=object) to the detected area\n");

@@ -45,13 +45,6 @@ MultiObjectDetector* MultiObjectDetector::addDetector(const std::shared_ptr<Obje
     return this;
 }
 
-
-void MultiObjectDetector::setObjectExport(const std::string &path, const std::string &suffix) {
-    std::for_each(this->detectors.begin(), this->detectors.end(), [&] (const std::shared_ptr<ObjectDetector> &detector) {
-        detector->setObjectExport(path, suffix);
-    });
-}
-
 bool MultiObjectDetector::supportsColor() const {
     return std::any_of(this->detectors.begin(), this->detectors.end(), [] (const std::shared_ptr<ObjectDetector> &detector) {
         return detector->supportsColor();

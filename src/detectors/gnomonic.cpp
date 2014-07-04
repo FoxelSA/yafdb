@@ -40,12 +40,6 @@
 #include "gnomonic.hpp"
 
 
-void GnomonicProjectionDetector::setObjectExport(const std::string &path, const std::string &suffix) {
-    if (this->detector) {
-        this->detector->setObjectExport(path, suffix);
-    }
-}
-
 bool GnomonicProjectionDetector::supportsColor() const {
     return !this->detector || this->detector->supportsColor();
 }

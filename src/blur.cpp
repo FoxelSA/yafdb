@@ -87,7 +87,7 @@ static struct option options[] = {
  *
  */
 void usage() {
-    printf("yafdb-blur --algorithm algo input-image.tiff input-objects.yml output-image.tiff\n\n");
+    printf("yafdb-blur --algorithm algo input-image.tiff input-objects.yaml output-image.tiff\n\n");
 
     printf("Blurs detected objects and write modified image as output.\n\n");
 

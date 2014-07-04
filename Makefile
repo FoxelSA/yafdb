@@ -6,18 +6,15 @@ INCLUDES += $(realpath libgnomonic/src/)
 SHARED_SOURCES := $(realpath $(shell find src/detectors/ -type f -iname "*.c" -o -iname "*.cpp"))
 SHARED_SOURCES += $(realpath $(shell find libgnomonic/src/ -type f -iname "*.c" -o -iname "*.cpp"))
 
-BLUR_SOURCES := $(SHARED_SOURCES) $(realpath src/blur.cpp)
-DETECT_SOURCES := $(SHARED_SOURCES) $(realpath src/detect.cpp)
-PREVIEW_SOURCES := $(SHARED_SOURCES) $(realpath src/preview.cpp)
-TEST_SOURCES := $(SHARED_SOURCES) $(realpath src/test.cpp)
-VALIDATE_SOURCES := $(SHARED_SOURCES) $(realpath src/validate.cpp)
+APP_SOURCES += $(realpath $(wildcard src/*.c src/*.cpp))
 
 # Objects
-BLUR_OBJECTS := $(addsuffix .o, $(basename $(BLUR_SOURCES)))
-DETECT_OBJECTS := $(addsuffix .o, $(basename $(DETECT_SOURCES)))
-PREVIEW_OBJECTS := $(addsuffix .o, $(basename $(PREVIEW_SOURCES)))
-TEST_OBJECTS := $(addsuffix .o, $(basename $(TEST_SOURCES)))
-VALIDATE_OBJECTS := $(addsuffix .o, $(basename $(VALIDATE_SOURCES)))
+SHARED_OBJECTS := $(addsuffix .o, $(basename $(SHARED_SOURCES)))
+
+APP_OBJECTS := $(addsuffix .o, $(basename $(APP_SOURCES)))
+
+# Programs
+APP_BINARIES := $(addprefix yafdb-, $(notdir $(basename $(APP_SOURCES))))
 
 # Compilation flags
 #RELEASEFLAGS := -g -O0
@@ -33,36 +30,17 @@ LIBRARIES := -lopencv_core -lopencv_imgproc -lopencv_features2d -lopencv_objdete
 BASE_DIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))/
 
 
-all: yafdb-blur yafdb-detect yafdb-preview yafdb-test yafdb-validate
+all: $(APP_BINARIES)
 
 clean:
-	@rm -f yafdb-blur yafdb-detect yafdb-preview yafdb-test yafdb-validate
-	@rm -f $(BLUR_OBJECTS)
-	@rm -f $(DETECT_OBJECTS)
-	@rm -f $(PREVIEW_OBJECTS)
-	@rm -f $(TEST_OBJECTS)
-	@rm -f $(VALIDATE_OBJECTS)
+	@rm -f $(APP_BINARIES)
+	@rm -f $(APP_OBJECTS)
+	@rm -f $(SHARED_OBJECTS)
 
 
-yafdb-blur: $(BLUR_OBJECTS)
+$(APP_BINARIES): $(SHARED_OBJECTS) $(APP_OBJECTS)
 	@echo "linking $(subst $(BASE_DIR),,$@)..."
-	@$(LINK.o) -o $@ $^ $(LIBRARIES)
-
-yafdb-detect: $(DETECT_OBJECTS)
-	@echo "linking $(subst $(BASE_DIR),,$@)..."
-	@$(LINK.o) -o $@ $^ $(LIBRARIES)
-
-yafdb-preview: $(PREVIEW_OBJECTS)
-	@echo "linking $(subst $(BASE_DIR),,$@)..."
-	@$(LINK.o) -o $@ $^ $(LIBRARIES)
-
-yafdb-test: $(TEST_OBJECTS)
-	@echo "linking $(subst $(BASE_DIR),,$@)..."
-	@$(LINK.o) -o $@ $^ $(LIBRARIES)
-
-yafdb-validate: $(VALIDATE_OBJECTS)
-	@echo "linking $(subst $(BASE_DIR),,$@)..."
-	@$(LINK.o) -o $@ $^ $(LIBRARIES)
+	@$(LINK.o) -o $@ $(SHARED_OBJECTS) $(realpath $(addprefix src/, $(addsuffix .o, $(subst yafdb-,,$(notdir $@))))) $(LIBRARIES)
 
 
 %.o: %.c
