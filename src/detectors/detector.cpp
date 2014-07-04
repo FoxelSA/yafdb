@@ -596,44 +596,87 @@ void ObjectDetector::merge(std::list<DetectedObject> &objects, int minOverlap) {
 
 void ObjectDetector::exportImages(const std::string &exportPath, const std::string &imageSuffix, const cv::Mat &source, const std::list<DetectedObject> &objects) {
     struct timespec ts;
-    char filename[256];
-    int nextIndex = 0;
+    char timestamp[64];
 
     memset(&ts, 0, sizeof(struct timespec));
     clock_gettime(CLOCK_MONOTONIC, &ts);
 
-    snprintf(filename, sizeof(filename), "%ld_%ld.yaml", ts.tv_sec, ts.tv_nsec / 1000l);
+    snprintf(timestamp, sizeof(timestamp), "%ld_%ld", ts.tv_sec, ts.tv_nsec / 1000l);
 
-    // export objects
-    cv::FileStorage fs(exportPath + "/" + filename, cv::FileStorage::WRITE);
+    // export object writer
+    cv::FileStorage fs(exportPath + "/" + timestamp + ".yaml", cv::FileStorage::WRITE);
 
-    fs << "objects";
-    fs << "[";
-    std::for_each(objects.begin(), objects.end(), [&] (const DetectedObject &object) {
-        std::string path(exportPath + "/" + filename + object.className + imageSuffix);
+    std::function<void(const DetectedObject &, const std::string &)> writeObject = [&] (const DetectedObject &object, const std::string &objectSuffix) {
+        // TODO: clean invalid characters
+        std::string className(object.className);
 
-        snprintf(filename, sizeof(filename), "%ld_%ld_%04d", ts.tv_sec, ts.tv_nsec / 1000l, nextIndex);
+        std::for_each(className.begin(), className.end(), [] (char &c) {
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
+                return;
+            }
+            c = '-';
+        });
+
+        // export image
+        std::string path(exportPath + "/" + timestamp + "_" + objectSuffix + "_" + className + imageSuffix);
+
         if (object.area.isCartesian()) {
             cv::Rect rect;
             cv::Point offset;
+            cv::Mat region(object.getRegion(source, offset, rect));
 
-            cv::imwrite(path, object.getRegion(source, offset, rect));
+            rect.x = MAX(rect.x, 0);
+            rect.y = MAX(rect.y, 0);
+            rect.width = MIN(rect.width, region.cols - rect.x);
+            rect.height = MIN(rect.height, region.rows - rect.y);
+            cv::imwrite(path, cv::Mat(region, rect));
         }
         if (object.area.isSpherical()) {
             GnomonicTransform transform;
             cv::Rect rect;
+            cv::Mat region(object.getGnomonicRegion(source, transform, rect, 1024, 5.0 * M_PI / 180.0));
 
-            cv::imwrite(path, object.getGnomonicRegion(source, transform, rect));
+            rect.x = MAX(rect.x, 0);
+            rect.y = MAX(rect.y, 0);
+            rect.width = MIN(rect.width, region.cols - rect.x);
+            rect.height = MIN(rect.height, region.rows - rect.y);
+            if (rect.x >= 0 && rect.y >= 0 && rect.width > 0 && rect.height > 0) {
+                cv::imwrite(path, cv::Mat(region, rect));
+            }
         }
 
+        // write descriptor
         fs << "{";
-            fs << "index" << nextIndex;
-            fs << "object";
-            object.write(fs);
             fs << "path" << path;
-        fs << "}";
+            fs << "className" << object.className;
+            fs << "area";
+            object.area.write(fs);
 
-        nextIndex++;
+            if (!object.children.empty()) {
+                int childIndex = 0;
+
+                fs << "children" << "[";
+                std::for_each(object.children.begin(), object.children.end(), [&] (const DetectedObject &child) {
+                    char suffix[32];
+
+                    snprintf(suffix, sizeof(suffix), "%04d", childIndex++);
+                    writeObject(child, objectSuffix + "_" + suffix);
+                });
+                fs << "]";
+            }
+        fs << "}";
+    };
+
+    // export objects
+    int nextIndex = 0;
+
+    fs << "objects";
+    fs << "[";
+    std::for_each(objects.begin(), objects.end(), [&] (const DetectedObject &object) {
+        char suffix[32];
+
+        snprintf(suffix, sizeof(suffix), "%04d", nextIndex++);
+        writeObject(object, suffix);
     });
     fs << "]";
 }

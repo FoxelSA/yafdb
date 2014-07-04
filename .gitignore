@@ -3,7 +3,7 @@
 *.jpeg
 *.tiff
 *.png
-*.yml
+*.yaml
 *.xml
 *.sh
 test/
