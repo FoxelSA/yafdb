@@ -54,17 +54,20 @@
 
 #define OPTION_MERGE_DISABLE          0
 #define OPTION_MERGE_MIN_OVERLAP      1
+#define OPTION_EXPORT                 2
 
 
 static int merge_enabled = 1;
 static int merge_min_overlap = 1;
+static const char *export_file = NULL;
 static const char *source_file = NULL;
 static const char *objects_file = NULL;
 
 
 static struct option options[] = {
-    {"merge-disable",             no_argument,       &merge_enabled,     0 },
-    {"merge-min-overlap",         required_argument, 0,                  0 },
+    {"merge-disable",     no_argument,       &merge_enabled,     0 },
+    {"merge-min-overlap", required_argument, 0,                  0 },
+    {"export",            required_argument, 0,                  0 },
     {0, 0, 0, 0}
 };
 
@@ -81,6 +84,7 @@ void usage() {
     printf("General options:\n\n");
     printf("--merge-disable: don't merge overlapping rectangles\n");
     printf("--merge-min-overlap 1 : minimum occurrence of overlap to keep detected objects\n");
+    printf("--export output-image.tiff : export detected objects in image\n");
     printf("\n");
 }
 
@@ -121,6 +125,14 @@ int main(int argc, char **argv) {
 
         case OPTION_MERGE_MIN_OVERLAP:
             merge_min_overlap = atoi(optarg);
+            break;
+
+        case OPTION_EXPORT:
+            export_file = optarg;
+            if (access(export_file, W_OK) && errno == EACCES) {
+                fprintf(stderr, "Error: output file not writable: %s\n", export_file);
+                return 2;
+            }
             break;
 
         default:
@@ -177,8 +189,12 @@ int main(int argc, char **argv) {
 
     std::for_each(objects.begin(), objects.end(), drawObject);
 
-    cv::namedWindow("preview", cv::WINDOW_NORMAL);
-    cv::imshow("preview", source);
-    while ((cv::waitKey(0) & 0xff) != '\n');
+    if (export_file != NULL) {
+        cv::imwrite(export_file, source);
+    } else {
+        cv::namedWindow("preview", cv::WINDOW_NORMAL);
+        cv::imshow("preview", source);
+        while ((cv::waitKey(0) & 0xff) != '\n');
+    }
     return 0;
 }

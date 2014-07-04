@@ -81,6 +81,7 @@ cascades.
 
     --merge-disable: don't merge overlapping rectangles
     --merge-min-overlap 1 : minimum occurrence of overlap to keep detected objects
+    --export output-image.tiff : export detected objects in image
 
 
 #### Object validation
