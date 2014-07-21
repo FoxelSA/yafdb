@@ -190,19 +190,19 @@ int main(int argc, char **argv) {
     ObjectDetector::merge(objects, merge_min_overlap);
 
     // apply blur operation
-    std::for_each(objects.begin(), objects.end(), [&] (const DetectedObject &object) {
-        auto rects = object.area.rects(source.cols, source.rows);
+    for (int i = 0; i < gaussian_steps; ++i)
+    {
+        std::for_each(objects.begin(), objects.end(), [&] (const DetectedObject &object) {
+            auto rects = object.area.rects(source.cols, source.rows);
 
-        std::for_each(rects.begin(), rects.end(), [&] (const cv::Rect &rect) {
-            cv::Mat region(source, rect);
+            std::for_each(rects.begin(), rects.end(), [&] (const cv::Rect &rect) {
+                cv::Mat region(source, rect);
 
-            switch (algorithm) {
-            case ALGORITHM_NONE:
-                break;
+                switch (algorithm) {
+                case ALGORITHM_NONE:
+                    break;
 
-            case ALGORITHM_GAUSSIAN:
-                for (int i = 0; i <= gaussian_steps; ++i)
-                {
+                case ALGORITHM_GAUSSIAN:
                     GaussianBlur(
                         region,
                         region,
@@ -210,15 +210,15 @@ int main(int argc, char **argv) {
                         0,
                         0
                     );
-                }
-                break;
+                    break;
 
-            default:
-                fprintf(stderr, "Error: unsupported blur algorithm!\n");
-                break;
-            }
+                default:
+                    fprintf(stderr, "Error: unsupported blur algorithm!\n");
+                    break;
+                }
+            });
         });
-    });
+    }
 
     // save target file
     cv::imwrite(target_file, source);
