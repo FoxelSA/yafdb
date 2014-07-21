@@ -64,11 +64,13 @@
 #define OPTION_ALGORITHM              0
 #define OPTION_MERGE_MIN_OVERLAP      1
 #define OPTION_GAUSSIAN_KERNEL        2
+#define OPTION_GAUSSIAN_STEPS         3
 
 
 static int algorithm = ALGORITHM_GAUSSIAN;
 static int merge_min_overlap = 1;
 static double gaussian_kernel_size = 65;
+static double gaussian_steps = 1;
 static const char *source_file = NULL;
 static const char *objects_file = NULL;
 static const char *target_file = NULL;
@@ -78,6 +80,7 @@ static struct option options[] = {
     {"algorithm",           required_argument, 0,                 'a'},
     {"merge-min-overlap",   required_argument, 0,                  0 },
     {"gaussian-kernel",     required_argument, 0,                  0 },
+    {"gaussian-steps",      required_argument, 0,                  0 },
     {0, 0, 0, 0}
 };
 
@@ -98,6 +101,7 @@ void usage() {
 
     printf("Gaussian options:\n\n");
     printf("--gaussian-kernel 65 : gaussian kernel size\n");
+    printf("--gaussian-steps 1 : gaussian blurring steps\n");
     printf("\n");
 }
 
@@ -156,6 +160,9 @@ int main(int argc, char **argv) {
         case OPTION_GAUSSIAN_KERNEL:
             gaussian_kernel_size = atof(optarg);
             break;
+        case OPTION_GAUSSIAN_STEPS:
+            gaussian_steps = atof(optarg);
+            break;
 
         default:
             usage();
@@ -194,13 +201,16 @@ int main(int argc, char **argv) {
                 break;
 
             case ALGORITHM_GAUSSIAN:
-                GaussianBlur(
-                    region,
-                    region,
-                    cv::Size(gaussian_kernel_size, gaussian_kernel_size),
-                    0,
-                    0
-                );
+                for (int i = 0; i <= gaussian_steps; ++i)
+                {
+                    GaussianBlur(
+                        region,
+                        region,
+                        cv::Size(gaussian_kernel_size, gaussian_kernel_size),
+                        0,
+                        0
+                    );
+                }
                 break;
 
             default:
