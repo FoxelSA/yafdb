@@ -115,7 +115,7 @@ cascades.
     Gaussian options:
 
     --gaussian-kernel 65 : gaussian kernel size
-
+    --gaussian-steps 1 : gaussian blurring steps
 
 #### Performance validation
 
