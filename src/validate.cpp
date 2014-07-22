@@ -60,6 +60,7 @@
 #define OPTION_GNOMONIC               4
 
 
+int type_slider = 0;
 static int fullscreen = 0;
 static int merge_enabled = 1;
 static int merge_min_overlap = 1;
@@ -110,7 +111,6 @@ void usage() {
     printf("--gnomonic : activate gnomonic reprojection for visualization\n");
     printf("\n");
  }
-
 
 /**
  * Program entry-point.
@@ -218,7 +218,7 @@ int main(int argc, char **argv) {
         auto draw = [&] () {
             cv::Mat preview(validationRegion.clone());
 
-            putText(preview, object.className, cv::Point2i(5, 5), CV_FONT_HERSHEY_DUPLEX, 0.5, cv::Scalar(255, 255, 255), 2, 8, false);
+            putText(preview, object.className, cv::Point2i(5, 15), CV_FONT_HERSHEY_DUPLEX, 0.5, cv::Scalar(255, 255, 255), 2, 8, false);
             rectangle(preview, rect, cv::Scalar(0, 255, 255), 2);
 
             cv::imshow("preview", preview);
@@ -258,7 +258,45 @@ int main(int argc, char **argv) {
                     object.area.p2.y = offset.y + rect.y + rect.height;
                 }
                 if (insert) {
+
+                    cv::namedWindow("Config", cv::WINDOW_NORMAL);
+                    cv::createTrackbar( "0 = Face, 1 = Sign", "Config", &type_slider, 1, NULL );
+
+                    int config_cond = 1;
+                    while (config_cond) {
+                        int key2 = cv::waitKey(0);
+
+                        switch (key2 & 0xff) {
+                            case 'y':
+                            case 'Y':
+                            case '\n':
+                            {
+                                switch(type_slider)
+                                {
+                                    case 0:
+                                    {
+                                        object.className = "Face";
+                                        break;
+                                    }
+
+                                    case 1:
+                                    {
+                                        object.className = "Sign";
+                                        break;
+                                    }
+                                }
+
+                                config_cond = 0;
+                            }
+                            default:
+                            {
+                                config_cond = 0;
+                            }
+                        }
+                    }
+
                     userObjects.push_back(object);
+                    cv::destroyWindow("Config");
                 } else {
                     validObjects.push_back(object);
                 }
