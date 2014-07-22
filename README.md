@@ -130,7 +130,7 @@ cascades.
 
     General options:
 
-    --algorithm algo : algorithm to use for blurring ('gaussian')
+    --algorithm algo : algorithm to use for blurring ('gaussian', 'progressive')
     --merge-min-overlap 1 : minimum occurrence of overlap to keep detected objects
 
     Gaussian options:
