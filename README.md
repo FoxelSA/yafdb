@@ -115,6 +115,12 @@ cascades.
         "y" | "Enter" => Validate
         "n" | "Escape" => Invalidate
 
+* Type config view
+    
+        "Escape" => Don't change the class type
+        "y" | "Enter" => Validate
+
+
 #### Object blurring
 
     yafdb-blur --algorithm algo input-image.tiff input-objects.yaml output-image.tiff
