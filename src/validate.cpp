@@ -53,12 +53,14 @@
  *
  */
 
-#define OPTION_MERGE_DISABLE          0
-#define OPTION_MERGE_MIN_OVERLAP      1
-#define OPTION_AUTO_VALIDATE          2
-#define OPTION_GNOMONIC               3
+#define OPTION_FULLSCREEN             0
+#define OPTION_MERGE_DISABLE          1
+#define OPTION_MERGE_MIN_OVERLAP      2
+#define OPTION_AUTO_VALIDATE          3
+#define OPTION_GNOMONIC               4
 
 
+static int fullscreen = 0;
 static int merge_enabled = 1;
 static int merge_min_overlap = 1;
 static int auto_validate = 0;
@@ -69,6 +71,7 @@ static const char *target_file = NULL;
 
 
 static struct option options[] = {
+    {"fullscreen",          no_argument,       &fullscreen,        1 },
     {"merge-disable",       no_argument,       &merge_enabled,     0 },
     {"merge-min-overlap",   required_argument, 0,                  0 },
     {"auto-validate",       no_argument,       &auto_validate,     1 },
@@ -97,6 +100,7 @@ void usage() {
     printf("Validate detected objects in source image.\n\n");
 
     printf("General options:\n\n");
+    printf("--fullscreen: Start validation window in fullscreen\n");
     printf("--merge-disable: don't merge overlapping rectangles\n");
     printf("--merge-min-overlap 1 : minimum occurrence of overlap to keep detected objects\n");
     printf("--auto-validate : enable auto-validation instead of manual validation\n");
@@ -145,6 +149,9 @@ int main(int argc, char **argv) {
         }
 
         switch (index) {
+        case OPTION_FULLSCREEN:
+            break;
+
         case OPTION_MERGE_DISABLE:
             break;
 
@@ -454,6 +461,12 @@ int main(int argc, char **argv) {
 
     // validate each detected object and review
     cv::namedWindow("preview", cv::WINDOW_NORMAL);
+
+    if(fullscreen)
+    {
+        cv::setWindowProperty( "preview", CV_WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN );
+    }
+
     if (auto_validate) {
         validObjects.insert(validObjects.begin(), objects.begin(), objects.end());
     } else {
