@@ -100,6 +100,20 @@ cascades.
 
     --gnomonic : activate gnomonic reprojection for visualization
 
+#### Controls
+
+* Panorama view
+
+        Left click on a rectangle => Edit
+        Right click on a rectangle => Invalidate
+        Left click then right click => Create a new zone (defined by the two previous selected points)
+
+* Edit view
+    
+        Left click => Change rectangle position (Upper left point)
+        Right click => Change rectangle size (Bottom right point)
+        "y" | "Enter" => Validate
+        "n" | "Escape" => Invalidate
 
 #### Object blurring
 
