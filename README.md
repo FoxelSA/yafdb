@@ -112,12 +112,13 @@ cascades.
     
         Left click => Change rectangle position (Upper left point)
         Right click => Change rectangle size (Bottom right point)
+        "t" => Edit class type
         "y" | "Enter" => Validate
         "n" | "Escape" => Invalidate
 
 * Type config view
     
-        "Escape" => Don't change the class type
+        "Escape" => Don't change the class type and close the window
         "y" | "Enter" => Validate
 
 
