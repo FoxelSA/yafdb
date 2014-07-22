@@ -113,6 +113,62 @@ void usage() {
  }
 
 /**
+ * Display object type configuration window
+ *
+ */
+void configureType(DetectedObject &object)
+{
+    char trackBarName[] = "0 = Face, 1 = Sign";
+
+    cv::namedWindow("Type config", cv::WINDOW_NORMAL);
+    cv::createTrackbar( trackBarName, "Type config", &type_slider, 1, NULL );
+
+    if(object.className == "face")
+    {
+        cv::setTrackbarPos(trackBarName, "Type config", 0);
+        type_slider = 0;
+    } 
+    else if(object.className == "sign")
+    {
+        cv::setTrackbarPos(trackBarName, "Type config", 1);
+        type_slider = 1;
+    }
+
+    int config_cond = 1;
+    while (config_cond) {
+        int key2 = cv::waitKey(0);
+
+        switch (key2 & 0xff) {
+            case 0x1b:
+                config_cond = 0;
+            case 'y':
+            case 'Y':
+            case '\n':
+            {
+                switch(type_slider)
+                {
+                    case 0:
+                    {
+                        object.className = "face";
+                        break;
+                    }
+
+                    case 1:
+                    {
+                        object.className = "sign";
+                        break;
+                    }
+                }
+
+                config_cond = 0;
+            }
+        }
+    }
+
+    cv::destroyWindow("Type config");
+}
+
+/**
  * Program entry-point.
  *
  */
@@ -244,6 +300,11 @@ int main(int argc, char **argv) {
             int key = cv::waitKey(0);
 
             switch (key & 0xff) {
+            case 't':
+            {
+                configureType(object);
+                break;
+            }
             case 'y':
             case 'Y':
             case '\n':
@@ -258,45 +319,8 @@ int main(int argc, char **argv) {
                     object.area.p2.y = offset.y + rect.y + rect.height;
                 }
                 if (insert) {
-
-                    cv::namedWindow("Type config", cv::WINDOW_NORMAL);
-                    cv::createTrackbar( "0 = Face, 1 = Sign", "Type config", &type_slider, 1, NULL );
-
-                    int config_cond = 1;
-                    while (config_cond) {
-                        int key2 = cv::waitKey(0);
-
-                        switch (key2 & 0xff) {
-                            case 'y':
-                            case 'Y':
-                            case '\n':
-                            {
-                                switch(type_slider)
-                                {
-                                    case 0:
-                                    {
-                                        object.className = "Face";
-                                        break;
-                                    }
-
-                                    case 1:
-                                    {
-                                        object.className = "Sign";
-                                        break;
-                                    }
-                                }
-
-                                config_cond = 0;
-                            }
-                            default:
-                            {
-                                config_cond = 0;
-                            }
-                        }
-                    }
-
+                    configureType(object);
                     userObjects.push_back(object);
-                    cv::destroyWindow("Type config");
                 } else {
                     validObjects.push_back(object);
                 }
