@@ -43,6 +43,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <getopt.h>
+#include <math.h>
 
 #include "detectors/detector.hpp"
 
@@ -52,8 +53,9 @@
  *
  */
 
-#define ALGORITHM_NONE       0
-#define ALGORITHM_GAUSSIAN   1
+#define ALGORITHM_NONE         0
+#define ALGORITHM_GAUSSIAN     1
+#define ALGORITHM_PROGRESSIVE  2
 
 
 /*
@@ -84,6 +86,127 @@ static struct option options[] = {
     {0, 0, 0, 0}
 };
 
+//! Progressive rectangular blurring
+
+//! Apply a progresive blur on the desired rectangle.
+//!
+//! @param pbBitmap Bitmap array pointer to result image
+//! @param pbSource Bitmap array pointer to source image
+//! @param pbWidth Bitmap width, in pixels
+//! @param pbHeight Bitmap height, in pixels
+//! @param pbLayer Bitmap number of chromatic layer
+//! @param pbChannel Layer on which blur apply
+//! @param pbRx1 Rectangle upper left corner x coordinates
+//! @param pbRy1 Rectangle upper left corner y coordinates
+//! @param pbRx2 Rectangle lower right corner x coordinates
+//! @param pbRy2 Rectangle lower right corner y coordinates
+
+void progblur ( unsigned char * pbBitmap, unsigned char * pbSource, int pbWidth, int pbHeight, int pbLayer, int pbChannel, int pbRx1, int pbRy1, int pbRx2, int pbRy2 ) {
+
+    /* Parsing variables */
+    int pbX = 0;
+    int pbY = 0;
+    int pbI = 0;
+    int pbJ = 0;
+    int pbK = 0;
+
+    /* Compute rectangle size */
+    int pbrWidth  = ( pbRx2 - pbRx1 );
+    int pbrHeight = ( pbRy2 - pbRy1 );
+
+    /* Compute rectangle center */
+    float pbCX = ( float ) pbrWidth  / 2.0 + pbRx1;
+    float pbCY = ( float ) pbrHeight / 2.0 + pbRy1;
+
+    /* Distance to center variable */
+    float pbDist = 0.0;
+
+    /* Area boudaries */
+    int pbAX1 = 0;
+    int pbAY1 = 0;
+    int pbAX2 = 0;
+    int pbAY2 = 0;
+
+    /* Chromaitc accumulator */
+    float pbAccum = 0.0;
+    int   pbCount = 0;
+
+    /* Increase rectangle size */
+    pbRx1 = pbCX - pbrWidth;
+    pbRx2 = pbCX + pbrWidth;
+    pbRy1 = pbCY - pbrHeight;
+    pbRy2 = pbCY + pbrHeight; 
+
+    /* Compute automatic factor */
+    float pbFactor = pbrWidth < pbrHeight ? pbrWidth : pbrHeight;
+
+    /* Blur force cofactor */
+    float pbStrengh = 0.0;
+
+    /* Dynamic recursive blurring */
+    for ( pbK = 0; pbK < pbFactor; pbK ++ ) {
+
+        /* Blurring y-component loop */
+        for ( pbY = pbRy1; pbY <= pbRy2; pbY ++ ) {
+
+            /* Blurring x-component loop */
+            for ( pbX = pbRx1; pbX <= pbRx2; pbX ++ ) {
+
+                /* Compute current distance to center */
+                pbDist = sqrt( ( pbX - pbCX ) * ( pbX - pbCX ) + ( pbY - pbCY ) * ( pbY - pbCY ) );
+
+                /* Check distance value */
+                pbDist = ( pbDist < 1 ) ? 1 : pbDist;
+
+                /* Progressive blur verification */
+                if ( ( ( pbFactor / pbDist ) > 1 ) && ( pbK <= ( int ) ( pbFactor / pbDist ) ) ) {
+
+                    /* Dynamic blur force */
+                    pbStrengh = ( pbFactor / pbDist ); pbStrengh = pbStrengh > 8 ? 8 : pbStrengh;
+
+                    if ( pbStrengh >= 1 ) {
+
+                    /* Create area boundaries */
+                    pbAX1 = pbX - pbStrengh; pbAX1 = ( pbAX1 <         0 ) ? 0 : pbAX1;
+                    pbAX2 = pbX + pbStrengh; pbAX2 = ( pbAX2 >=  pbWidth ) ? 0 : pbAX2;
+                    pbAY1 = pbY - pbStrengh; pbAY1 = ( pbAY1 <         0 ) ? 0 : pbAY1;
+                    pbAY2 = pbY + pbStrengh; pbAY2 = ( pbAY2 >= pbHeight ) ? 0 : pbAY2;
+
+                    /* Reset chromatic accumulator */
+                    pbAccum = 0.0;
+                    pbCount = 0;
+
+                    /* Accumulates components - x */
+                    for ( pbI = pbAX1; pbI <= pbAX2; pbI ++ ) {
+
+                        /* Accumulates components - x */
+                        for ( pbJ = pbAY1; pbJ <= pbAY2; pbJ ++ ) {
+
+                            /* Accumulate chromatic value */
+                            pbAccum += * ( pbBitmap + pbLayer * ( pbWidth * pbJ + pbI ) + pbChannel );
+
+                            /* Update count */
+                            pbCount++;
+
+                        }
+
+                    }
+
+                    /* Assign mean value */
+                    * ( pbBitmap + pbLayer * ( pbWidth * pbY + pbX ) + pbChannel ) = pbAccum / ( float ) pbCount;
+
+                    }
+
+                }
+
+            }
+
+        }
+
+    }
+
+}
+
 
 /**
  * Display program usage.
@@ -95,7 +218,7 @@ void usage() {
     printf("Blurs detected objects and write modified image as output.\n\n");
 
     printf("General options:\n\n");
-    printf("--algorithm algo : algorithm to use for blurring ('gaussian')\n");
+    printf("--algorithm algo : algorithm to use for blurring ('gaussian', 'progressive')\n");
     printf("--merge-min-overlap 1 : minimum occurrence of overlap to keep detected objects\n");
     printf("\n");
 
@@ -148,6 +271,8 @@ int main(int argc, char **argv) {
                 algorithm = ALGORITHM_NONE;
             } else if (strcmp(optarg, "gaussian") == 0) {
                 algorithm = ALGORITHM_GAUSSIAN;
+            } else if (strcmp(optarg, "progressive") == 0) {
+                algorithm = ALGORITHM_PROGRESSIVE;
             } else {
                 fprintf(stderr, "Error: unsupported algorithm: %s\n", optarg);
             }
@@ -203,6 +328,7 @@ int main(int argc, char **argv) {
                     break;
 
                 case ALGORITHM_GAUSSIAN:
+                {
                     GaussianBlur(
                         region,
                         region,
@@ -210,7 +336,50 @@ int main(int argc, char **argv) {
                         0,
                         0
                     );
-                    break;
+                }
+                break;
+
+                case ALGORITHM_PROGRESSIVE:
+                {
+                    cv::Mat original = source.clone();
+
+                    progblur (  source.data, 
+                                original.data, 
+                                original.cols, 
+                                original.rows,
+                                source.channels(), 
+                                0,
+                                rect.x,
+                                rect.y,
+                                rect.x + rect.width,
+                                rect.y + rect.height
+                            );
+
+                            progblur (  source.data, 
+                                original.data, 
+                                original.cols, 
+                                original.rows,
+                                source.channels(), 
+                                1,
+                                rect.x,
+                                rect.y,
+                                rect.x + rect.width,
+                                rect.y + rect.height
+                            );
+
+                            progblur (  source.data, 
+                                original.data, 
+                                original.cols, 
+                                original.rows,
+                                source.channels(), 
+                                2,
+                                rect.x,
+                                rect.y,
+                                rect.x + rect.width,
+                                rect.y + rect.height
+                            );
+                }
+                break;
 
                 default:
                     fprintf(stderr, "Error: unsupported blur algorithm!\n");
