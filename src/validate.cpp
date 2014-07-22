@@ -259,8 +259,8 @@ int main(int argc, char **argv) {
                 }
                 if (insert) {
 
-                    cv::namedWindow("Config", cv::WINDOW_NORMAL);
-                    cv::createTrackbar( "0 = Face, 1 = Sign", "Config", &type_slider, 1, NULL );
+                    cv::namedWindow("Type config", cv::WINDOW_NORMAL);
+                    cv::createTrackbar( "0 = Face, 1 = Sign", "Type config", &type_slider, 1, NULL );
 
                     int config_cond = 1;
                     while (config_cond) {
@@ -296,7 +296,7 @@ int main(int argc, char **argv) {
                     }
 
                     userObjects.push_back(object);
-                    cv::destroyWindow("Config");
+                    cv::destroyWindow("Type config");
                 } else {
                     validObjects.push_back(object);
                 }
