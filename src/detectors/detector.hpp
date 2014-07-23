@@ -333,6 +333,9 @@ public:
     /** Rough bounding area in source image */
     BoundingBox area;
 
+    /** Is false positive ? */
+    std::string falsePositive;
+
     /** Children objects */
     std::list<DetectedObject> children;
 
@@ -348,8 +351,9 @@ public:
      *
      * \param className object class name
      * \param area bounding area
+     * \param falsePositive Is false positive ?
      */
-    DetectedObject(const std::string &className, const BoundingBox &area) : className(className), area(area) {
+    DetectedObject(const std::string &className, const BoundingBox &area, const std::string &falsePositive) : className(className), area(area), falsePositive(falsePositive) {
     }
 
     /**
@@ -357,15 +361,16 @@ public:
      *
      * \param className object class name
      * \param area bounding area
+     * \param falsePositive Is false positive ?
      * \param children children objects
      */
-    DetectedObject(const std::string &className, const BoundingBox &area, const std::list<DetectedObject> &children) : className(className), area(area), children(children) {
+    DetectedObject(const std::string &className, const BoundingBox &area, const std::string &falsePositive, const std::list<DetectedObject> &children) : className(className), area(area), falsePositive(falsePositive), children(children) {
     }
 
     /**
      * Copy constructor.
      */
-    DetectedObject(const DetectedObject &ref) : className(ref.className), area(ref.area), children(ref.children) {
+    DetectedObject(const DetectedObject &ref) : className(ref.className), area(ref.area), falsePositive(ref.falsePositive), children(ref.children) {
     }
 
     /**

@@ -49,7 +49,7 @@ bool HaarDetector::detect(const cv::Mat &source, std::list<DetectedObject> &obje
 
     this->classifier.detectMultiScale(source, rects, this->scaleFactor, this->minOverlap, 0, cv::Size(10, 10), cv::Size());
     std::for_each(rects.begin(), rects.end(), [&] (const cv::Rect &rect) {
-        objects.push_back(DetectedObject(this->className, rect));
+        objects.push_back(DetectedObject(this->className, rect, "No"));
     });
     return true;
 }

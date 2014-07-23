@@ -178,7 +178,7 @@ int main(int argc, char **argv) {
         for (auto it = rects.begin(); it != rects.end(); ++it) {
             putText(source, object.className, (*it).tl(), CV_FONT_HERSHEY_SIMPLEX, 3, cv::Scalar(255, 255, 255), 3);
 
-            if(object.className == "falsepositive")
+            if(object.falsePositive == "Yes")
             {
                 rectangle(source, *it, colors[3], borderSize);
             } else {

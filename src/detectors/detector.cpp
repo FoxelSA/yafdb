@@ -342,7 +342,7 @@ bool GnomonicTransform::toEqr(const BoundingBox &src, BoundingBox &dst) const {
 }
 
 
-DetectedObject::DetectedObject(const cv::FileNode &node) : className(node["className"]), area(node["area"]) {
+DetectedObject::DetectedObject(const cv::FileNode &node) : className(node["className"]), area(node["area"]), falsePositive(node["falsePositive"]) {
     auto childrenNode = node["children"];
 
     for (auto it = childrenNode.begin(); it != childrenNode.end(); ++it) {
@@ -355,6 +355,7 @@ void DetectedObject::write(cv::FileStorage &fs) const {
         fs << "className" << this->className;
         fs << "area";
         this->area.write(fs);
+        fs << "falsePositive" << this->falsePositive;
         if (!this->children.empty()) {
             fs << "children" << "[";
                 for (auto it = this->children.begin(); it != this->children.end(); ++it) {
@@ -561,16 +562,20 @@ void ObjectDetector::merge(std::list<DetectedObject> &objects, int minOverlap) {
 
         BoundingBox area(v[i].area);
         std::set<std::string> classNames;
+        std::set<std::string> falsePositives;
         std::list<DetectedObject> children(v[i].children);
         int count = 1;
 
         classNames.insert(v[i].className);
+        falsePositives.insert(v[i].falsePositive);
+        
         for (unsigned int j = i + 1; j < v.size(); j++) {
             if (used.find(j) != used.end()) {
                 continue;
             }
             if (area.mergeIfOverlap(v[j].area)) {
                 classNames.insert(v[j].className);
+                falsePositives.insert(v[j].falsePositive);
                 children.insert(children.end(), v[j].children.begin(), v[j].children.end());
                 used.insert(j);
                 count++;
@@ -586,6 +591,7 @@ void ObjectDetector::merge(std::list<DetectedObject> &objects, int minOverlap) {
 
         if (count >= minOverlap) {
             std::string className;
+            std::string falsePositiveName;
 
             for (auto it = classNames.begin(); it != classNames.end(); ++it) {
                 if (!className.empty()) {
@@ -594,9 +600,16 @@ void ObjectDetector::merge(std::list<DetectedObject> &objects, int minOverlap) {
                 className.append(*it);
             }
 
+            for (auto it = falsePositives.begin(); it != falsePositives.end(); ++it) {
+                if (!falsePositiveName.empty()) {
+                    falsePositiveName.append(":");
+                }
+                falsePositiveName.append(*it);
+            }
+
             ObjectDetector::merge(children);
 
-            objects.push_back(DetectedObject(className, area, children));
+            objects.push_back(DetectedObject(className, area, falsePositiveName, children));
         }
     }
 }

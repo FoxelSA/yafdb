@@ -347,7 +347,7 @@ int main(int argc, char **argv) {
                         object.area.p2.x = offset.x + rect.x + rect.width;
                         object.area.p2.y = offset.y + rect.y + rect.height;
                     }
-                    object.className = "falsepositive";
+                    object.falsePositive = "Yes";
                     invalidObjects.push_back(object);
                 }
                 return;
@@ -366,12 +366,14 @@ int main(int argc, char **argv) {
         if (gnomonic_enabled) {
             object = DetectedObject(
                 "manual",
-                BoundingBox(BoundingBox::SPHERICAL, pixelsToSpherical(p1), pixelsToSpherical(p2))
+                BoundingBox(BoundingBox::SPHERICAL, pixelsToSpherical(p1), pixelsToSpherical(p2)),
+                "No"
             );
         } else {
             object = DetectedObject(
                 "manual",
-                BoundingBox(cv::Rect(p1.x, p1.y, p1.x + p2.x, p1.y + p2.y))
+                BoundingBox(cv::Rect(p1.x, p1.y, p1.x + p2.x, p1.y + p2.y)),
+                "No"
             );
         }
         editObject(object, true);
@@ -543,7 +545,7 @@ int main(int argc, char **argv) {
 
     if (auto_validate) {
         std::for_each(objects.begin(), objects.end(), [&] (DetectedObject &object) {
-            if(object.className != "falsepositive")
+            if(object.falsePositive == "No")
             {
                 validObjects.push_back(object); 
             } else {
