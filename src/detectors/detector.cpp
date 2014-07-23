@@ -687,7 +687,7 @@ void ObjectDetector::exportImages(const std::string &exportPath, const std::stri
             fs << "className" << object.className;
             fs << "area";
             object.area.write(fs);
-            fs << "falsePositive" << object.falsePositive;
+            fs << "falsePositive" << (object.falsePositive.length() > 0 ? object.falsePositive : "No");
 
             if (!object.children.empty()) {
                 int childIndex = 0;
