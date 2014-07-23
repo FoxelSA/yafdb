@@ -177,7 +177,13 @@ int main(int argc, char **argv) {
 
         for (auto it = rects.begin(); it != rects.end(); ++it) {
             putText(source, object.className, (*it).tl(), CV_FONT_HERSHEY_SIMPLEX, 3, cv::Scalar(255, 255, 255), 3);
-            rectangle(source, *it, colors[depth], borderSize);
+
+            if(object.className == "falsepositive")
+            {
+                rectangle(source, *it, colors[3], borderSize);
+            } else {
+                rectangle(source, *it, colors[depth], borderSize);
+            }
         }
         for (auto it = object.children.begin(); it != object.children.end(); ++it) {
             drawObjectWithDepth(*it, MAX(depth + 1, 5));

@@ -183,18 +183,6 @@ int main(int argc, char **argv) {
         ObjectDetector::merge(objects, merge_min_overlap);
     }
 
-    // create export folder
-    std::stringstream stream(output_path);
-    std::string path;
-
-    for (std::string item; std::getline(stream, item, '/'); ) {
-        if (path.length() > 0) {
-            path.append("/");
-        }
-        path.append(item);
-        mkdir(path.c_str(), 0755);
-    }
-
     // export detected objects
     switch (format) {
     case FORMAT_PNG:

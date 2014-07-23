@@ -40,6 +40,7 @@
 #include <stdlib.h>
 #include <memory.h>
 #include <time.h>
+#include <sys/stat.h>
 
 #include "detector.hpp"
 #include "gnomonic.hpp"
@@ -538,6 +539,12 @@ bool ObjectDetector::load(const std::string &file, std::list<DetectedObject> &ob
     for (auto it = objectsNode.begin(); it != objectsNode.end(); ++it) {
         objects.push_back(*it);
     }
+
+    auto objectsNode_inv = fs["invalidObjects"];
+    for (auto it = objectsNode_inv.begin(); it != objectsNode_inv.end(); ++it) {
+        objects.push_back(*it);
+    }
+    
     return true;
 }
 
@@ -603,6 +610,18 @@ void ObjectDetector::exportImages(const std::string &exportPath, const std::stri
 
     snprintf(timestamp, sizeof(timestamp), "%ld_%ld", ts.tv_sec, ts.tv_nsec / 1000l);
 
+    // Create directories
+    std::stringstream stream(exportPath);
+    std::string path_mkd;
+
+    for (std::string item; std::getline(stream, item, '/'); ) {
+        if (path_mkd.length() > 0) {
+            path_mkd.append("/");
+        }
+        path_mkd.append(item);
+        mkdir(path_mkd.c_str(), 0755);
+    }
+
     // export object writer
     cv::FileStorage fs(exportPath + "/" + timestamp + ".yaml", cv::FileStorage::WRITE);
 
@@ -618,7 +637,10 @@ void ObjectDetector::exportImages(const std::string &exportPath, const std::stri
         });
 
         // export image
-        std::string path(exportPath + "/" + timestamp + "_" + objectSuffix + "_" + className + imageSuffix);
+        std::string path(exportPath + "/" + object.className + "/" + timestamp + "_" + objectSuffix + "_" + className + imageSuffix);
+
+        // Create className directory
+        mkdir((exportPath + "/" + object.className).c_str(), 0755);
 
         if (object.area.isCartesian()) {
             cv::Rect rect;
@@ -631,6 +653,7 @@ void ObjectDetector::exportImages(const std::string &exportPath, const std::stri
             rect.height = MIN(rect.height, region.rows - rect.y);
             cv::imwrite(path, cv::Mat(region, rect));
         }
+
         if (object.area.isSpherical()) {
             GnomonicTransform transform;
             cv::Rect rect;
