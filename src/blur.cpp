@@ -140,11 +140,11 @@ void progblur ( unsigned char * pbBitmap, unsigned char * pbSource, int pbWidth,
     /* Compute automatic factor */
     float pbFactor = pbrWidth < pbrHeight ? pbrWidth : pbrHeight;
 
-    /* Blur force cofactor */
+    /* Blur force */
     float pbStrengh = 0.0;
 
     /* Dynamic recursive blurring */
-    for ( pbK = 0; pbK < pbFactor; pbK ++ ) {
+    for ( pbK = 0; pbK < pbFactor * 0.05; pbK ++ ) {
 
         /* Blurring y-component loop */
         for ( pbY = pbRy1; pbY <= pbRy2; pbY ++ ) {
@@ -156,10 +156,13 @@ void progblur ( unsigned char * pbBitmap, unsigned char * pbSource, int pbWidth,
                 pbDist = sqrt( ( pbX - pbCX ) * ( pbX - pbCX ) + ( pbY - pbCY ) * ( pbY - pbCY ) );
 
                 /* Check distance value */
-                pbDist = ( pbDist < 1 ) ? 1 : pbDist;
+                // pbDist = ( pbDist < 1 ) ? 1 : pbDist;
+
+                /* Compute blur strengh */
+                pbStrengh = exp( - ( pbDist / pbFactor ) * ( pbDist / pbFactor ) * 2 ) * 2 * ( pbFactor * 0.05 );
 
                 /* Progressive blur verification */
-                if ( ( ( pbFactor / pbDist ) > 1 ) && ( pbK <= ( int ) ( pbFactor / pbDist ) ) ) {
+                if ( pbK < pbStrengh ) {
 
                     /* Dynamic blur force */
                     pbStrengh = ( pbFactor / pbDist ); pbStrengh = pbStrengh > 8 ? 8 : pbStrengh;
