@@ -112,12 +112,13 @@ cascades.
     
         Left click => Change rectangle position (Upper left point)
         Right click => Change rectangle size (Bottom right point)
+        "t" => Edit class type
         "y" | "Enter" => Validate
         "n" | "Escape" => Invalidate
 
 * Type config view
     
-        "Escape" => Don't change the class type
+        "Escape" => Don't change the class type and close the window
         "y" | "Enter" => Validate
 
 
@@ -129,7 +130,7 @@ cascades.
 
     General options:
 
-    --algorithm algo : algorithm to use for blurring ('gaussian')
+    --algorithm algo : algorithm to use for blurring ('gaussian', 'progressive')
     --merge-min-overlap 1 : minimum occurrence of overlap to keep detected objects
 
     Gaussian options:
