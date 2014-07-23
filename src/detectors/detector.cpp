@@ -8,6 +8,7 @@
  * Author(s):
  *
  *      Antony Ducommun <nitro@tmsrv.org>
+ *      Kevin Velickovic <k.velickovic@foxel.ch>
  *
  *
  * This file is part of the FOXEL project <http://foxel.ch>.
@@ -651,9 +652,14 @@ void ObjectDetector::exportImages(const std::string &exportPath, const std::stri
 
         // export image
         std::string path(exportPath + "/" + object.className + "/" + timestamp + "_" + objectSuffix + "_" + className + imageSuffix);
+        std::string path_false(exportPath +  "/" + object.className + "/" + "false_positives" + "/" + timestamp + "_" + objectSuffix + "_" + className + imageSuffix);
 
         // Create className directory
         mkdir((exportPath + "/" + object.className).c_str(), 0755);
+
+        // Create false_positives directory
+        if(object.falsePositive == "Yes")
+        mkdir((exportPath + "/" + object.className + "/" + "false_positives").c_str(), 0755);
 
         if (object.area.isCartesian()) {
             cv::Rect rect;
@@ -664,7 +670,13 @@ void ObjectDetector::exportImages(const std::string &exportPath, const std::stri
             rect.y = MAX(rect.y, 0);
             rect.width = MIN(rect.width, region.cols - rect.x);
             rect.height = MIN(rect.height, region.rows - rect.y);
-            cv::imwrite(path, cv::Mat(region, rect));
+
+            if(object.falsePositive == "Yes")
+            {
+                cv::imwrite(path_false, cv::Mat(region, rect));
+            } else {
+                cv::imwrite(path, cv::Mat(region, rect));
+            }
         }
 
         if (object.area.isSpherical()) {
@@ -677,13 +689,18 @@ void ObjectDetector::exportImages(const std::string &exportPath, const std::stri
             rect.width = MIN(rect.width, region.cols - rect.x);
             rect.height = MIN(rect.height, region.rows - rect.y);
             if (rect.x >= 0 && rect.y >= 0 && rect.width > 0 && rect.height > 0) {
-                cv::imwrite(path, cv::Mat(region, rect));
+                if(object.falsePositive == "Yes")
+                {
+                    cv::imwrite(path_false, cv::Mat(region, rect));
+                } else {
+                    cv::imwrite(path, cv::Mat(region, rect));
+                }
             }
         }
 
         // write descriptor
         fs << "{";
-            fs << "path" << path;
+            fs << "path" << (object.falsePositive == "Yes" ? path_false : path);
             fs << "className" << object.className;
             fs << "area";
             object.area.write(fs);

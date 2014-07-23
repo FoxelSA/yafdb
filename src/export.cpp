@@ -8,6 +8,7 @@
  * Author(s):
  *
  *      Antony Ducommun <nitro@tmsrv.org>
+ *      Kevin Velickovic <k.velickovic@foxel.ch>
  *
  *
  * This file is part of the FOXEL project <http://foxel.ch>.
