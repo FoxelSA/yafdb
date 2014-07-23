@@ -325,6 +325,8 @@ int main(int argc, char **argv) {
                     object.area.p2.x = offset.x + rect.x + rect.width;
                     object.area.p2.y = offset.y + rect.y + rect.height;
                 }
+                object.falsePositive = "No";
+                
                 if (insert) {
                     configureType(object);
                     userObjects.push_back(object);
