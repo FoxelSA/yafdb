@@ -91,7 +91,9 @@ cascades.
     Validate detected objects in source image.
 
     General options:
-
+    
+    --fullscreen : Start validation window in fullscreen
+    --show-invalid-objects : Display invalid objects
     --merge-disable: don't merge overlapping rectangles
     --merge-min-overlap 1 : minimum occurrence of overlap to keep detected objects
     --auto-validate : enable auto-validation instead of manual validation
