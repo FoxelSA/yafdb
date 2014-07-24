@@ -8,6 +8,7 @@
  * Author(s):
  *
  *      Antony Ducommun <nitro@tmsrv.org>
+ *      Kevin Velickovic <k.velickovic@foxel.ch>
  *
  *
  * This file is part of the FOXEL project <http://foxel.ch>.
@@ -347,40 +348,40 @@ int main(int argc, char **argv) {
                     cv::Mat original = source.clone();
 
                     progblur (  source.data, 
-                                original.data, 
-                                original.cols, 
-                                original.rows,
-                                source.channels(), 
-                                0,
-                                rect.x,
-                                rect.y,
-                                rect.x + rect.width,
-                                rect.y + rect.height
-                            );
+                        original.data, 
+                        original.cols, 
+                        original.rows,
+                        source.channels(), 
+                        0,
+                        rect.x,
+                        rect.y,
+                        rect.x + rect.width,
+                        rect.y + rect.height
+                    );
 
-                            progblur (  source.data, 
-                                original.data, 
-                                original.cols, 
-                                original.rows,
-                                source.channels(), 
-                                1,
-                                rect.x,
-                                rect.y,
-                                rect.x + rect.width,
-                                rect.y + rect.height
-                            );
+                    progblur (  source.data, 
+                        original.data, 
+                        original.cols, 
+                        original.rows,
+                        source.channels(), 
+                        1,
+                        rect.x,
+                        rect.y,
+                        rect.x + rect.width,
+                        rect.y + rect.height
+                    );
 
-                            progblur (  source.data, 
-                                original.data, 
-                                original.cols, 
-                                original.rows,
-                                source.channels(), 
-                                2,
-                                rect.x,
-                                rect.y,
-                                rect.x + rect.width,
-                                rect.y + rect.height
-                            );
+                    progblur (  source.data, 
+                        original.data, 
+                        original.cols, 
+                        original.rows,
+                        source.channels(), 
+                        2,
+                        rect.x,
+                        rect.y,
+                        rect.x + rect.width,
+                        rect.y + rect.height
+                    );
                 }
                 break;
 
@@ -392,7 +393,12 @@ int main(int argc, char **argv) {
         });
     }
 
+    // Configure the quality level for jpeg images
+    std::vector<int> compression_params;
+    compression_params.push_back(CV_IMWRITE_JPEG_QUALITY);
+    compression_params.push_back(100);
+
     // save target file
-    cv::imwrite(target_file, source);
+    cv::imwrite(target_file, source, compression_params);
     return 0;
 }
