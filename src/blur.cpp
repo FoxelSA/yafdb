@@ -68,8 +68,11 @@
 #define OPTION_MERGE_MIN_OVERLAP      1
 #define OPTION_GAUSSIAN_KERNEL        2
 #define OPTION_GAUSSIAN_STEPS         3
+#define OPTION_RESIZE_WIDTH           4
+#define OPTION_RESIZE_HEIGHT          5
 
-
+static int resize_width = 0;
+static int resize_height = 0;
 static int algorithm = ALGORITHM_GAUSSIAN;
 static int merge_min_overlap = 1;
 static double gaussian_kernel_size = 65;
@@ -84,6 +87,8 @@ static struct option options[] = {
     {"merge-min-overlap",   required_argument, 0,                  0 },
     {"gaussian-kernel",     required_argument, 0,                  0 },
     {"gaussian-steps",      required_argument, 0,                  0 },
+    {"resize-width",        required_argument, 0,                  0 },
+    {"resize-height",       required_argument, 0,                  0 },
     {0, 0, 0, 0}
 };
 
@@ -230,6 +235,11 @@ void usage() {
     printf("--gaussian-kernel 65 : gaussian kernel size\n");
     printf("--gaussian-steps 1 : gaussian blurring steps\n");
     printf("\n");
+
+    printf("Resizing options:\n\n");
+    printf("--resize-width 800: Resizing width\n");
+    printf("--resize-height 600: Resizing height\n");
+    printf("\n");
 }
 
 
@@ -291,6 +301,12 @@ int main(int argc, char **argv) {
             break;
         case OPTION_GAUSSIAN_STEPS:
             gaussian_steps = atof(optarg);
+            break;
+        case OPTION_RESIZE_WIDTH:
+            resize_width = atoi(optarg);
+            break;
+        case OPTION_RESIZE_HEIGHT:
+            resize_height = atoi(optarg);
             break;
 
         default:
@@ -398,7 +414,20 @@ int main(int argc, char **argv) {
     compression_params.push_back(CV_IMWRITE_JPEG_QUALITY);
     compression_params.push_back(100);
 
-    // save target file
-    cv::imwrite(target_file, source, compression_params);
+    // Resize the image if specified
+    if(resize_width > 0 && resize_height > 0)
+    {
+        // Create the resized image
+        cv::Size size(resize_width, resize_height);
+        cv::Mat resized_image;
+        cv::resize(source, resized_image, size);
+
+        // save target file
+        cv::imwrite(target_file, resized_image, compression_params);
+    } else {
+        // save target file
+        cv::imwrite(target_file, source, compression_params);
+    }
+
     return 0;
 }

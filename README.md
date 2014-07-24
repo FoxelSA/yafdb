@@ -140,6 +140,11 @@ cascades.
     --gaussian-kernel 65 : gaussian kernel size
     --gaussian-steps 1 : gaussian blurring steps
 
+    Resizing options:
+
+    --resize-width 800: Resizing width
+    --resize-height 600: Resizing height
+
 #### Performance validation
 
     yafdb-test input-objects.yaml mask-image.png
