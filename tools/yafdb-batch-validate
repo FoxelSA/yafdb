@@ -38,10 +38,6 @@
 
 FilesCount=0
 FilesProcessed=1
-NullConfig="%YAML:1.0\n"
-NullFile="/tmp/$(basename $0).$$.tmp"
-
-echo $NullConfig > $NullFile
 
 for f in ../*.jpeg
 do
@@ -63,7 +59,7 @@ do
 	if [ ! -f yml_configs/$TimeStamp.yml ]
 	then
 	    echo Processing $TimeStamp $FilesProcessed/$FilesCount
-	    yafdb-validate --fullscreen --gnomonic ../$TimeStamp.jpeg $NullFile yml_configs/$TimeStamp.yml
+	    yafdb-validate --fullscreen --gnomonic ../$TimeStamp.jpeg yml_configs/$TimeStamp.yml
 	    FilesProcessed=$((FilesProcessed+1))
 	else
 		if [ "$1" == "-v" ]; then
