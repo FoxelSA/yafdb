@@ -1,0 +1,75 @@
+#!/bin/bash
+#
+# elphel-parallel-processing - Elphel camera array images post processing using GNU parallel
+#
+# Copyright (c) 2014 FOXEL SA - http://foxel.ch
+# Please read <http://foxel.ch/license> for more information.
+#
+#
+# Author(s):
+#
+#      Kevin Velickovic <k.velickovic@foxel.ch>
+#
+#
+# This file is part of the FOXEL project <http://foxel.ch>.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+# Additional Terms:
+#
+#      You are required to preserve legal notices and author attributions in
+#      that material or in the Appropriate Legal Notices displayed by works
+#      containing it.
+#
+#      You are required to attribute the work as explained in the "Usage and
+#      Attribution" section of <http://foxel.ch/license>.
+
+FilesCount=0
+FilesProcessed=1
+NullConfig="%YAML:1.0\n"
+NullFile="/tmp/$(basename $0).$$.tmp"
+
+echo $NullConfig > $NullFile
+
+for f in ../*.jpeg
+do
+ 	TimeStamp=$(basename $f .jpeg)
+	if [ ! -f yml_configs/$TimeStamp.yml ]
+	then
+		FilesCount=$((FilesCount+1))
+	else
+		if [ "$1" == "-v" ]; then
+		    FilesCount=$((FilesCount+1))
+		fi		
+	fi
+done
+
+for f in ../*.jpeg
+do
+
+ 	TimeStamp=$(basename $f .jpeg)
+	if [ ! -f yml_configs/$TimeStamp.yml ]
+	then
+	    echo Processing $TimeStamp $FilesProcessed/$FilesCount
+	    yafdb-validate --fullscreen --gnomonic ../$TimeStamp.jpeg $NullFile yml_configs/$TimeStamp.yml
+	    FilesProcessed=$((FilesProcessed+1))
+	else
+		if [ "$1" == "-v" ]; then
+		    echo Validating $TimeStamp $FilesProcessed/$FilesCount
+		    yafdb-validate --fullscreen --auto-validate --gnomonic ../$TimeStamp.jpeg yml_configs/$TimeStamp.yml yml_configs/$TimeStamp.yml
+		    FilesProcessed=$((FilesProcessed+1))
+		fi
+	fi
+done
