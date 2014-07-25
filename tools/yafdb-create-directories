@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# elphel-parallel-processing - Elphel camera array images post processing using GNU parallel
+# yafdb - Yet Another Face Detection and Bluring
 #
 # Copyright (c) 2014 FOXEL SA - http://foxel.ch
 # Please read <http://foxel.ch/license> for more information.
