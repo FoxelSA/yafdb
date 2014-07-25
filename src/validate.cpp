@@ -63,6 +63,7 @@
 
 
 int type_slider = 0;
+static int manual_mode = 0;
 static int fullscreen = 0;
 static int show_invalid_objects = 0;
 static int merge_enabled = 1;
@@ -100,7 +101,7 @@ static struct option options[] = {
  *
  */
 void usage() {
-    printf("yafdb-validate input-image.tiff input-objects.yaml output-objects.yaml\n\n");
+    printf("yafdb-validate input-image.tiff [input-objects.yaml] output-objects.yaml\n\n");
 
     printf("Validate detected objects in source image.\n\n");
 
@@ -184,10 +185,14 @@ int main(int argc, char **argv) {
 
         getopt_long(argc, argv, "", options, &index);
         if (index == -1) {
-            if (argc != optind + 3) {
+
+            if ((argc - optind) < 2) {
                 usage();
                 return 1;
             }
+
+            if((argc - optind) == 2)
+                manual_mode = 1;
 
             source_file = argv[optind++];
             if (access(source_file, R_OK)) {
@@ -195,10 +200,13 @@ int main(int argc, char **argv) {
                 return 2;
             }
 
-            objects_file = argv[optind++];
-            if (access(objects_file, R_OK)) {
-                fprintf(stderr, "Error: detected objects file not readable: %s\n", objects_file);
-                return 2;
+            if(!manual_mode)
+            {
+                objects_file = argv[optind++];
+                if (access(objects_file, R_OK)) {
+                    fprintf(stderr, "Error: detected objects file not readable: %s\n", objects_file);
+                    return 2;
+                }
             }
 
             target_file = argv[optind++];
@@ -246,14 +254,17 @@ int main(int argc, char **argv) {
     // read detected objects
     std::list<DetectedObject> objects;
 
-    if (!ObjectDetector::load(objects_file, objects)) {
-        fprintf(stderr, "Error: cannot read objects in file: %s\n", objects_file);
-        return 2;
-    }
+    if(!manual_mode)
+    {
+        if (!ObjectDetector::load(objects_file, objects)) {
+            fprintf(stderr, "Error: cannot read objects in file: %s\n", objects_file);
+            return 2;
+        }
 
-    // merge detected objects
-    if (merge_enabled) {
-        ObjectDetector::merge(objects, merge_min_overlap);
+        // merge detected objects
+        if (merge_enabled) {
+            ObjectDetector::merge(objects, merge_min_overlap);
+        }
     }
 
     // object editors
@@ -546,39 +557,44 @@ int main(int argc, char **argv) {
         cv::setWindowProperty( "preview", CV_WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN );
     }
 
-    if (auto_validate) {
-        std::for_each(objects.begin(), objects.end(), [&] (DetectedObject &object) {
-            if(object.falsePositive == "No")
-            {
-                validObjects.push_back(object); 
-            } else {
-                invalidObjects.push_back(object); 
-            }
-        });
-    } else {
-        std::for_each(objects.begin(), objects.end(), [&] (DetectedObject &object) {
-            editObject(object, false);
-        });
+    if(!manual_mode)
+    {
+        if (auto_validate) {
+            std::for_each(objects.begin(), objects.end(), [&] (DetectedObject &object) {
+                if(object.falsePositive == "No")
+                {
+                    validObjects.push_back(object); 
+                } else {
+                    invalidObjects.push_back(object); 
+                }
+            });
+        } else {
+            std::for_each(objects.begin(), objects.end(), [&] (DetectedObject &object) {
+                editObject(object, false);
+            });
+        }
     }
     preview();
     cv::destroyWindow("preview");
 
     // save validated objects
-    cv::FileStorage fsr(objects_file, cv::FileStorage::READ);
     cv::FileStorage fs(target_file, cv::FileStorage::WRITE);
 
-    fs << "algorithm" << (std::string)fsr["algorithm"];
-    // fs << "haar" << fsr["haar"];
-    if (fsr["gnomonic"].isMap()) {
-        fs << "gnomonic" << "{";
-        fs << "width" << (int)fsr["gnomonic"]["width"];
-        fs << "aperture_x" << (int)fsr["gnomonic"]["aperture_x"];
-        fs << "aperture_y" << (int)fsr["gnomonic"]["aperture_y"];
-        fs << "}";
+    if(!manual_mode)
+    {
+        cv::FileStorage fsr(objects_file, cv::FileStorage::READ);
+
+        fs << "algorithm" << (std::string)fsr["algorithm"];
+        // fs << "haar" << fsr["haar"];
+        if (fsr["gnomonic"].isMap()) {
+            fs << "gnomonic" << "{";
+            fs << "width" << (int)fsr["gnomonic"]["width"];
+            fs << "aperture_x" << (int)fsr["gnomonic"]["aperture_x"];
+            fs << "aperture_y" << (int)fsr["gnomonic"]["aperture_y"];
+            fs << "}";
+        }
     }
-    // if (export_format != FORMAT_NONE && export_path != NULL) {
-    //     fs << "export" << "{" << "format" << export_format << "path" << export_path << "}";
-    // }
+
     fs << "source" << source_file;
     fs << "objects" << "[";
     std::for_each(validObjects.begin(), validObjects.end(), [&] (const DetectedObject &object) {
@@ -593,5 +609,6 @@ int main(int argc, char **argv) {
         object.write(fs);
     });
     fs << "]";
+
     return 0;
 }
