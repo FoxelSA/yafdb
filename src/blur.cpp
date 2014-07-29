@@ -100,21 +100,29 @@ static struct option options[] = {
 //! @param pbSource Bitmap array pointer to source image
 //! @param pbWidth Bitmap width, in pixels
 //! @param pbHeight Bitmap height, in pixels
-//! @param pbLayer Bitmap number of chromatic layer
 //! @param pbChannel Layer on which blur apply
 //! @param pbRx1 Rectangle upper left corner x coordinates
 //! @param pbRy1 Rectangle upper left corner y coordinates
 //! @param pbRx2 Rectangle lower right corner x coordinates
 //! @param pbRy2 Rectangle lower right corner y coordinates
 
-void progblur ( unsigned char * pbBitmap, unsigned char * pbSource, int pbWidth, int pbHeight, int pbLayer, int pbChannel, int pbRx1, int pbRy1, int pbRx2, int pbRy2 ) {
+void progblur ( unsigned char * pbBitmap, int pbWidth, int pbHeight, int pbChannel, int pbRx1, int pbRy1, int pbRx2, int pbRy2 ) {
 
     /* Parsing variables */
     int pbX = 0;
     int pbY = 0;
     int pbI = 0;
     int pbJ = 0;
-    int pbK = 0;
+
+    /* Function parameters */
+    float pbU = 0.0;
+    float pbV = 0.0;
+
+    /* Area boudaries */
+    int pbAX1 = 0;
+    int pbAY1 = 0;
+    int pbAX2 = 0;
+    int pbAY2 = 0;
 
     /* Compute rectangle size */
     int pbrWidth  = ( pbRx2 - pbRx1 );
@@ -124,91 +132,98 @@ void progblur ( unsigned char * pbBitmap, unsigned char * pbSource, int pbWidth,
     float pbCX = ( float ) pbrWidth  / 2.0 + pbRx1;
     float pbCY = ( float ) pbrHeight / 2.0 + pbRy1;
 
-    /* Distance to center variable */
-    float pbDist = 0.0;
-
-    /* Area boudaries */
-    int pbAX1 = 0;
-    int pbAY1 = 0;
-    int pbAX2 = 0;
-    int pbAY2 = 0;
-
-    /* Chromaitc accumulator */
-    float pbAccum = 0.0;
-    int   pbCount = 0;
-
-    /* Increase rectangle size */
-    pbRx1 = pbCX - pbrWidth;
-    pbRx2 = pbCX + pbrWidth;
-    pbRy1 = pbCY - pbrHeight;
-    pbRy2 = pbCY + pbrHeight; 
-
     /* Compute automatic factor */
     float pbFactor = pbrWidth < pbrHeight ? pbrWidth : pbrHeight;
 
-    /* Blur force */
-    float pbStrengh = 0.0;
+    /* Chromaitc accumulator */
+    float pbAccumR = 0.0;
+    float pbAccumG = 0.0;
+    float pbAccumB = 0.0;
+    int   pbForce  = 0;
+    int   pbCount  = 0;
 
-    /* Dynamic recursive blurring */
-    for ( pbK = 0; pbK < pbFactor * 0.05; pbK ++ ) {
+    /* Optimization for bitmap offset */
+    unsigned char * pbOffset = NULL;
 
-        /* Blurring y-component loop */
-        for ( pbY = pbRy1; pbY <= pbRy2; pbY ++ ) {
+    /* Optimization for bitmap sub-offset */
+    int pbYOffset = 0;
+    int pbJOffset = 0;
 
-            /* Blurring x-component loop */
-            for ( pbX = pbRx1; pbX <= pbRx2; pbX ++ ) {
+    /* Increase rectangle size */
+    pbRx1 = pbCX - pbFactor;
+    pbRx2 = pbCX + pbFactor;
+    pbRy1 = pbCY - pbFactor;
+    pbRy2 = pbCY + pbFactor;
 
-                /* Compute current distance to center */
-                pbDist = sqrt( ( pbX - pbCX ) * ( pbX - pbCX ) + ( pbY - pbCY ) * ( pbY - pbCY ) );
+    /* Recompute adapted width and height */
+    pbrWidth  = ( pbRx2 - pbRx1 );
+    pbrHeight = ( pbRy2 - pbRy1 );
 
-                /* Check distance value */
-                // pbDist = ( pbDist < 1 ) ? 1 : pbDist;
+    /* Optimization operation */
+    pbFactor *= 0.2;
 
-                /* Compute blur strengh */
-                pbStrengh = exp( - ( pbDist / pbFactor ) * ( pbDist / pbFactor ) * 2 ) * 2 * ( pbFactor * 0.05 );
+    /* Blurring y-component loop */
+    for ( pbY = pbRy1; pbY <= pbRy2; pbY ++ ) {
 
-                /* Progressive blur verification */
-                if ( pbK < pbStrengh ) {
+        /* Compute optimization sub-offset */
+        pbYOffset = pbChannel * pbWidth * pbY;
 
-                    /* Dynamic blur force */
-                    pbStrengh = ( pbFactor / pbDist ); pbStrengh = pbStrengh > 8 ? 8 : pbStrengh;
+        /* Compute coordinates v-parameters */
+        pbV = ( ( float ) ( pbY - pbRy1 ) / pbrHeight ) * 2.0 - 1.0;
 
-                    if ( pbStrengh >= 1 ) {
+        /* Blurring x-component loop */
+        for ( pbX = pbRx1; pbX <= pbRx2; pbX ++ ) {
 
-                    /* Create area boundaries */
-                    pbAX1 = pbX - pbStrengh; pbAX1 = ( pbAX1 <         0 ) ? 0 : pbAX1;
-                    pbAX2 = pbX + pbStrengh; pbAX2 = ( pbAX2 >=  pbWidth ) ? 0 : pbAX2;
-                    pbAY1 = pbY - pbStrengh; pbAY1 = ( pbAY1 <         0 ) ? 0 : pbAY1;
-                    pbAY2 = pbY + pbStrengh; pbAY2 = ( pbAY2 >= pbHeight ) ? 0 : pbAY2;
+            /* Reset chromatic accumulator */
+            pbAccumR = 0.0;
+            pbAccumG = 0.0;
+            pbAccumB = 0.0; 
 
-                    /* Reset chromatic accumulator */
-                    pbAccum = 0.0;
-                    pbCount = 0;
+            /* Compute coordinates u-parameters */
+            pbU = ( ( float ) ( pbX - pbRx1 ) / pbrWidth  ) * 2.0 - 1.0;
 
-                    /* Accumulates components - x */
-                    for ( pbI = pbAX1; pbI <= pbAX2; pbI ++ ) {
+            /* Compute recursive condition value */
+            pbForce = int( exp( - pbU * pbU * 3.5 ) * exp( - pbV * pbV * 3.5 ) * pbFactor );
 
-                        /* Accumulates components - x */
-                        for ( pbJ = pbAY1; pbJ <= pbAY2; pbJ ++ ) {
+            pbForce = ( pbForce > 32 ) ? 32 : pbForce;
 
-                            /* Accumulate chromatic value */
-                            pbAccum += * ( pbBitmap + pbLayer * ( pbWidth * pbJ + pbI ) + pbChannel );
+            /* Create area boundaries */
+            pbAX1 = pbX - pbForce; pbAX1 = ( pbAX1 <         0 ) ?            0 : pbAX1;
+            pbAX2 = pbX + pbForce; pbAX2 = ( pbAX2 >=  pbWidth ) ? pbWidth  - 1 : pbAX2;
+            pbAY1 = pbY - pbForce; pbAY1 = ( pbAY1 <         0 ) ?            0 : pbAY1;
+            pbAY2 = pbY + pbForce; pbAY2 = ( pbAY2 >= pbHeight ) ? pbHeight - 1 : pbAY2;
 
-                            /* Update count */
-                            pbCount++;
+            /* Accumulates y-components */
+            for ( pbJ = pbAY1; pbJ <= pbAY2; pbJ ++ ) {
 
-                        }
+                /* Compute optimization sub-offset */
+                pbJOffset = pbChannel * pbWidth * pbJ;
 
-                    }
+                /* Accumulates x-components */
+                for ( pbI = pbAX1; pbI <= pbAX2; pbI ++ ) {
 
-                    /* Assign mean value */
-                    * ( pbBitmap + pbLayer * ( pbWidth * pbY + pbX ) + pbChannel ) = pbAccum / ( float ) pbCount;
+                    /* Compute optimiztion offset */
+                    pbOffset = pbBitmap + pbJOffset + pbChannel * pbI;
 
-                    }
+                    /* Accumulate chromatic value */
+                    pbAccumR += * ( pbOffset ++ );
+                    pbAccumG += * ( pbOffset ++ );
+                    pbAccumB += * ( pbOffset    );
 
                 }
 
             }
+
+            /* Compute number of considered pixels */
+            pbCount = ( pbAX2 - pbAX1 + 1 ) * ( pbAY2 - pbAY1 + 1 );
+
+            /* Compute optimization offset */
+            pbOffset = pbBitmap + pbYOffset + pbChannel * pbX;
+
+            /* Assign mean value */
+            * ( pbOffset ++ ) = pbAccumR / pbCount;
+            * ( pbOffset ++ ) = pbAccumG / pbCount;
+            * ( pbOffset    ) = pbAccumB / pbCount;
 
         }
 
@@ -361,38 +376,11 @@ int main(int argc, char **argv) {
 
                 case ALGORITHM_PROGRESSIVE:
                 {
-                    cv::Mat original = source.clone();
-
-                    progblur (  source.data, 
-                        original.data, 
-                        original.cols, 
-                        original.rows,
+                    progblur (  
+                        source.data, 
+                        source.cols, 
+                        source.rows,
                         source.channels(), 
-                        0,
-                        rect.x,
-                        rect.y,
-                        rect.x + rect.width,
-                        rect.y + rect.height
-                    );
-
-                    progblur (  source.data, 
-                        original.data, 
-                        original.cols, 
-                        original.rows,
-                        source.channels(), 
-                        1,
-                        rect.x,
-                        rect.y,
-                        rect.x + rect.width,
-                        rect.y + rect.height
-                    );
-
-                    progblur (  source.data, 
-                        original.data, 
-                        original.cols, 
-                        original.rows,
-                        source.channels(), 
-                        2,
                         rect.x,
                         rect.y,
                         rect.x + rect.width,
