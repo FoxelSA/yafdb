@@ -365,6 +365,12 @@ int main(int argc, char **argv) {
                 }
                 object.falsePositive = "No";
 
+                if (!object.children.empty()) {
+                    for (auto itc = object.children.begin(); itc != object.children.end(); ++itc) {
+                        (*itc).falsePositive = "No";
+                    }
+                }
+
                 if (insert) {
                     configureType(object);
                     userObjects.push_back(object);
@@ -481,6 +487,14 @@ int main(int argc, char **argv) {
                     }
 
                     if (xok && yok) {
+                        object.falsePositive = "Yes";
+
+                        if (!object.children.empty()) {
+                            for (auto itc = object.children.begin(); itc != object.children.end(); ++itc) {
+                                (*itc).falsePositive = "Yes";
+                            }
+                        }
+
                         editObjects.push_back(object);
                     } else {
                         list.push_back(object);
