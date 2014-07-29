@@ -353,47 +353,50 @@ int main(int argc, char **argv) {
     for (int i = 0; i < gaussian_steps; ++i)
     {
         std::for_each(objects.begin(), objects.end(), [&] (const DetectedObject &object) {
-            auto rects = object.area.rects(source.cols, source.rows);
+            if(object.falsePositive != "Yes")
+            {
+                auto rects = object.area.rects(source.cols, source.rows);
 
-            std::for_each(rects.begin(), rects.end(), [&] (const cv::Rect &rect) {
-                cv::Mat region(source, rect);
+                std::for_each(rects.begin(), rects.end(), [&] (const cv::Rect &rect) {
+                    cv::Mat region(source, rect);
 
-                switch (algorithm) {
-                case ALGORITHM_NONE:
+                    switch (algorithm) {
+                    case ALGORITHM_NONE:
+                        break;
+
+                    case ALGORITHM_GAUSSIAN:
+                    {
+                        GaussianBlur(
+                            region,
+                            region,
+                            cv::Size(gaussian_kernel_size, gaussian_kernel_size),
+                            0,
+                            0
+                        );
+                    }
                     break;
 
-                case ALGORITHM_GAUSSIAN:
-                {
-                    GaussianBlur(
-                        region,
-                        region,
-                        cv::Size(gaussian_kernel_size, gaussian_kernel_size),
-                        0,
-                        0
-                    );
-                }
-                break;
-
-                case ALGORITHM_PROGRESSIVE:
-                {
-                    progblur (  
-                        source.data, 
-                        source.cols, 
-                        source.rows,
-                        source.channels(), 
-                        rect.x,
-                        rect.y,
-                        rect.x + rect.width,
-                        rect.y + rect.height
-                    );
-                }
-                break;
-
-                default:
-                    fprintf(stderr, "Error: unsupported blur algorithm!\n");
+                    case ALGORITHM_PROGRESSIVE:
+                    {
+                        progblur (  
+                            source.data, 
+                            source.cols, 
+                            source.rows,
+                            source.channels(), 
+                            rect.x,
+                            rect.y,
+                            rect.x + rect.width,
+                            rect.y + rect.height
+                        );
+                    }
                     break;
-                }
-            });
+
+                    default:
+                        fprintf(stderr, "Error: unsupported blur algorithm!\n");
+                        break;
+                    }
+                });
+            }
         });
     }
 
