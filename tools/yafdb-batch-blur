@@ -36,11 +36,5 @@
 #      You are required to attribute the work as explained in the "Usage and
 #      Attribution" section of <http://foxel.ch/license>.
 
-if [ $# -eq 0 ]
-  then
-    echo "Usage: $0 <Gaussian Steps>"
-    exit
-fi
-
 echo "Blurring images..."
-find yml_configs/ -iname "*.yml" | parallel --eta -j+0 yafdb-blur --gaussian-steps $1 --merge-min-overlap 1 --algorithm gaussian --gaussian-kernel 99 ../{/.}.jpeg yml_configs/{/.}.yml blurred_images/{/.}.jpeg
+find yml_configs/ -iname "*.yml" | parallel --eta -j+0 yafdb-blur --merge-min-overlap 1 --algorithm progressive ../{/.}.jpeg yml_configs/{/.}.yml blurred_images/{/.}.jpeg
