@@ -1,10 +1,12 @@
 # Includes
 INCLUDES := $(realpath include/)
 INCLUDES += $(realpath libgnomonic/src/)
+INCLUDES += $(realpath libgnomonic/lib/libinter/src/)
 
 # Sources
 SHARED_SOURCES := $(realpath $(shell find src/detectors/ -type f -iname "*.c" -o -iname "*.cpp"))
 SHARED_SOURCES += $(realpath $(shell find libgnomonic/src/ -type f -iname "*.c" -o -iname "*.cpp"))
+SHARED_SOURCES += $(realpath $(shell find libgnomonic/lib/libinter/src/ -type f -iname "*.c" -o -iname "*.cpp"))
 
 APP_SOURCES += $(realpath $(wildcard src/*.c src/*.cpp))
 

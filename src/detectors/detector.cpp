@@ -297,7 +297,7 @@ void GnomonicTransform::toGnomonic(const cv::Mat &src, cv::Mat &dst) const {
         -this->gnomonic_theta,
         this->gnomonic_ax / 2.0,
         this->gnomonic_ay / 2.0,
-        gnomonic_interp_bilinearf
+        inter_bilinearf
     );
 }
 
