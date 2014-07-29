@@ -124,7 +124,7 @@ void usage() {
  */
 void configureType(DetectedObject &object)
 {
-    char trackBarName[] = "0 = Face, 1 = Sign";
+    char trackBarName[] = "0 = Face, 1 = Number Plate";
 
     cv::namedWindow("Type config", cv::WINDOW_NORMAL);
     cv::createTrackbar( trackBarName, "Type config", &type_slider, 1, NULL );
@@ -133,8 +133,8 @@ void configureType(DetectedObject &object)
     {
         cv::setTrackbarPos(trackBarName, "Type config", 0);
         type_slider = 0;
-    } 
-    else if(object.className == "sign")
+    }
+    else if(object.className == "numberplate")
     {
         cv::setTrackbarPos(trackBarName, "Type config", 1);
         type_slider = 1;
@@ -161,7 +161,7 @@ void configureType(DetectedObject &object)
 
                     case 1:
                     {
-                        object.className = "sign";
+                        object.className = "numberplate";
                         break;
                     }
                 }
@@ -179,9 +179,9 @@ void configureType(DetectedObject &object)
  *
  */
 void writeObjects(
-    cv::FileStorage fs, 
-    std::list<DetectedObject> validObjects, 
-    std::list<DetectedObject> userObjects, 
+    cv::FileStorage fs,
+    std::list<DetectedObject> validObjects,
+    std::list<DetectedObject> userObjects,
     std::list<DetectedObject> invalidObjects
 ) {
     fs << "source" << source_file;
@@ -197,7 +197,7 @@ void writeObjects(
     std::for_each(invalidObjects.begin(), invalidObjects.end(), [&] (const DetectedObject &object) {
         object.write(fs);
     });
-    fs << "]";    
+    fs << "]";
 }
 
 /**
@@ -364,7 +364,7 @@ int main(int argc, char **argv) {
                     object.area.p2.y = offset.y + rect.y + rect.height;
                 }
                 object.falsePositive = "No";
-                
+
                 if (insert) {
                     configureType(object);
                     userObjects.push_back(object);
@@ -429,7 +429,7 @@ int main(int argc, char **argv) {
             cv::Mat preview(eqrWidth, eqrHeight, source.type());
 
             cv::resize(source, preview, cv::Size(eqrWidth, eqrHeight));
-            
+
             if(show_invalid_objects)
             {
                 std::for_each(invalidObjects.begin(), invalidObjects.end(), [&] (const DetectedObject &object) {
@@ -589,9 +589,9 @@ int main(int argc, char **argv) {
             std::for_each(objects.begin(), objects.end(), [&] (DetectedObject &object) {
                 if(object.falsePositive == "No")
                 {
-                    validObjects.push_back(object); 
+                    validObjects.push_back(object);
                 } else {
-                    invalidObjects.push_back(object); 
+                    invalidObjects.push_back(object);
                 }
             });
         } else {
@@ -623,7 +623,7 @@ int main(int argc, char **argv) {
 
     } else {
 
-        cv::FileStorage fs(target_file, cv::FileStorage::WRITE); 
+        cv::FileStorage fs(target_file, cv::FileStorage::WRITE);
         writeObjects(fs, validObjects, userObjects, invalidObjects);
 
     }
