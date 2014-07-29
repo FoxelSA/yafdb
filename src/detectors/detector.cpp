@@ -356,7 +356,7 @@ void DetectedObject::write(cv::FileStorage &fs) const {
         fs << "className" << this->className;
         fs << "area";
         this->area.write(fs);
-        fs << "falsePositive" << this->falsePositive;
+        fs << "falsePositive" << (this->falsePositive.length() > 0 ? this->falsePositive : "No");
         if (!this->children.empty()) {
             fs << "children" << "[";
                 for (auto it = this->children.begin(); it != this->children.end(); ++it) {

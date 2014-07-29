@@ -175,6 +175,32 @@ void configureType(DetectedObject &object)
 }
 
 /**
+ * Write output objects.
+ *
+ */
+void writeObjects(
+    cv::FileStorage fs, 
+    std::list<DetectedObject> validObjects, 
+    std::list<DetectedObject> userObjects, 
+    std::list<DetectedObject> invalidObjects
+) {
+    fs << "source" << source_file;
+    fs << "objects" << "[";
+    std::for_each(validObjects.begin(), validObjects.end(), [&] (const DetectedObject &object) {
+        object.write(fs);
+    });
+    std::for_each(userObjects.begin(), userObjects.end(), [&] (const DetectedObject &object) {
+        object.write(fs);
+    });
+    fs << "]";
+    fs << "invalidObjects" << "[";
+    std::for_each(invalidObjects.begin(), invalidObjects.end(), [&] (const DetectedObject &object) {
+        object.write(fs);
+    });
+    fs << "]";    
+}
+
+/**
  * Program entry-point.
  *
  */
@@ -577,15 +603,14 @@ int main(int argc, char **argv) {
     preview();
     cv::destroyWindow("preview");
 
-    // save validated objects
-    cv::FileStorage fs(target_file, cv::FileStorage::WRITE);
-
     if(!manual_mode)
     {
+
+        // save validated objects
         cv::FileStorage fsr(objects_file, cv::FileStorage::READ);
+        cv::FileStorage fs(target_file, cv::FileStorage::WRITE);
 
         fs << "algorithm" << (std::string)fsr["algorithm"];
-        // fs << "haar" << fsr["haar"];
         if (fsr["gnomonic"].isMap()) {
             fs << "gnomonic" << "{";
             fs << "width" << (int)fsr["gnomonic"]["width"];
@@ -593,22 +618,15 @@ int main(int argc, char **argv) {
             fs << "aperture_y" << (int)fsr["gnomonic"]["aperture_y"];
             fs << "}";
         }
-    }
 
-    fs << "source" << source_file;
-    fs << "objects" << "[";
-    std::for_each(validObjects.begin(), validObjects.end(), [&] (const DetectedObject &object) {
-        object.write(fs);
-    });
-    std::for_each(userObjects.begin(), userObjects.end(), [&] (const DetectedObject &object) {
-        object.write(fs);
-    });
-    fs << "]";
-    fs << "invalidObjects" << "[";
-    std::for_each(invalidObjects.begin(), invalidObjects.end(), [&] (const DetectedObject &object) {
-        object.write(fs);
-    });
-    fs << "]";
+        writeObjects(fs, validObjects, userObjects, invalidObjects);
+
+    } else {
+
+        cv::FileStorage fs(target_file, cv::FileStorage::WRITE); 
+        writeObjects(fs, validObjects, userObjects, invalidObjects);
+
+    }
 
     return 0;
 }
