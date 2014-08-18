@@ -546,7 +546,7 @@ bool ObjectDetector::load(const std::string &file, std::list<DetectedObject> &ob
     for (auto it = objectsNode_inv.begin(); it != objectsNode_inv.end(); ++it) {
         objects.push_back(*it);
     }
-    
+
     return true;
 }
 
@@ -569,7 +569,7 @@ void ObjectDetector::merge(std::list<DetectedObject> &objects, int minOverlap) {
 
         classNames.insert(v[i].className);
         falsePositives.insert(v[i].falsePositive);
-        
+
         for (unsigned int j = i + 1; j < v.size(); j++) {
             if (used.find(j) != used.end()) {
                 continue;
@@ -661,6 +661,13 @@ void ObjectDetector::exportImages(const std::string &exportPath, const std::stri
         if(object.falsePositive == "Yes")
         mkdir((exportPath + "/" + object.className + "/" + "false_positives").c_str(), 0755);
 
+        // Configure the exported images quality level
+        std::vector<int> compression_params;
+        compression_params.push_back(CV_IMWRITE_JPEG_QUALITY);
+        compression_params.push_back(100);
+        compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
+        compression_params.push_back(0);
+
         if (object.area.isCartesian()) {
             cv::Rect rect;
             cv::Point offset;
@@ -673,9 +680,9 @@ void ObjectDetector::exportImages(const std::string &exportPath, const std::stri
 
             if(object.falsePositive == "Yes")
             {
-                cv::imwrite(path_false, cv::Mat(region, rect));
+                cv::imwrite(path_false, cv::Mat(region, rect), compression_params);
             } else {
-                cv::imwrite(path, cv::Mat(region, rect));
+                cv::imwrite(path, cv::Mat(region, rect), compression_params);
             }
         }
 
@@ -691,9 +698,9 @@ void ObjectDetector::exportImages(const std::string &exportPath, const std::stri
             if (rect.x >= 0 && rect.y >= 0 && rect.width > 0 && rect.height > 0) {
                 if(object.falsePositive == "Yes")
                 {
-                    cv::imwrite(path_false, cv::Mat(region, rect));
+                    cv::imwrite(path_false, cv::Mat(region, rect), compression_params);
                 } else {
-                    cv::imwrite(path, cv::Mat(region, rect));
+                    cv::imwrite(path, cv::Mat(region, rect), compression_params);
                 }
             }
         }
