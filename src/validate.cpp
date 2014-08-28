@@ -63,6 +63,8 @@
 
 
 int type_slider = 0;
+int confirm_slider = 0;
+
 static int manual_mode = 0;
 static int fullscreen = 0;
 static int show_invalid_objects = 0;
@@ -117,6 +119,40 @@ void usage() {
     printf("--gnomonic : activate gnomonic reprojection for visualization\n");
     printf("\n");
  }
+
+/**
+ * Display a confirmation dialog (Yes/No)
+ *
+ */
+int confirmationDialog(char* Text)
+{
+    char trackBarName[] = "0 = No, 1 = Yes";
+
+    cv::namedWindow(Text, cv::WINDOW_NORMAL);
+    cv::createTrackbar( trackBarName, Text, &confirm_slider, 1, NULL );
+    cv::setTrackbarPos(trackBarName, Text, 0);
+
+    int confirm_cond = 1;
+
+    while (confirm_cond) {
+        int key = cv::waitKey(0);
+
+        switch (key & 0xff) {
+            case 0x1b:
+            case 'y':
+            case 'Y':
+            case '\n':
+            {
+                confirm_cond = 0;
+                break;
+            }
+        }
+    }
+
+    cv::destroyWindow(Text);
+
+    return confirm_slider;
+}
 
 /**
  * Display object type configuration window
@@ -582,8 +618,11 @@ int main(int argc, char **argv) {
                 switch (key & 0xff) {
                 case '\n':
                 case 0x1b:
-                    done = true;
-                    break;
+                    if(confirmationDialog("Exit yafdb-validate without saving ?"))
+                    {
+                        done = true;
+                        break;
+                    }
                 }
             }
         }
