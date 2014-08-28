@@ -124,7 +124,7 @@ void usage() {
  * Display a confirmation dialog (Yes/No)
  *
  */
-int confirmationDialog(char* Text)
+int confirmationDialog(const char* Text)
 {
     char trackBarName[] = "0 = No, 1 = Yes";
 
