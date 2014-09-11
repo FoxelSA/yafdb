@@ -1,9 +1,12 @@
 /yafdb-*
-*.o
+*.jpg
 *.jpeg
-*.tiff
+*.log
+*.lst
+*.o
 *.png
+*.tiff
+*.vec
 *.yaml
 *.xml
-*.sh
 test/

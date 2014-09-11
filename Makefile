@@ -26,7 +26,7 @@ CFLAGS += -pipe -std=gnu99 -Wall -funsigned-char $(RELEASEFLAGS)
 CXXFLAGS += -pipe -std=gnu++11 -Wall -funsigned-char $(RELEASEFLAGS)
 LDFLAGS += -pipe
 LIBRARIES := -lopencv_core -lopencv_imgproc -lopencv_features2d -lopencv_objdetect \
-	-lopencv_highgui -lopencv_contrib -lpthread -lm -lstdc++
+	-lopencv_highgui -lopencv_calib3d -lopencv_contrib -lpthread -lm -lstdc++
 
 # System detection
 BASE_DIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))/
