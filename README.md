@@ -29,6 +29,7 @@ cascades.
     git submodule update --init --recursive
     make clean
     make
+    sudo make install
 
 
 ### Usage
