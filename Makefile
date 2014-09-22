@@ -9,6 +9,7 @@ SHARED_SOURCES += $(realpath $(shell find libgnomonic/src/ -type f -iname "*.c" 
 SHARED_SOURCES += $(realpath $(shell find libgnomonic/lib/libinter/src/ -type f -iname "*.c" -o -iname "*.cpp"))
 
 APP_SOURCES += $(realpath $(wildcard src/*.c src/*.cpp))
+APP_TOOLS   += $(realpath $(wildcard tools/*))
 
 # Objects
 SHARED_OBJECTS := $(addsuffix .o, $(basename $(SHARED_SOURCES)))
@@ -17,6 +18,7 @@ APP_OBJECTS := $(addsuffix .o, $(basename $(APP_SOURCES)))
 
 # Programs
 APP_BINARIES := $(addprefix yafdb-, $(notdir $(basename $(APP_SOURCES))))
+APP_TOOLS := $(addprefix tools/, $(notdir $(basename $(APP_TOOLS))))
 
 # Compilation flags
 #RELEASEFLAGS := -g -O0
@@ -39,6 +41,9 @@ clean:
 	@rm -f $(APP_OBJECTS)
 	@rm -f $(SHARED_OBJECTS)
 
+install: $(APP_BINARIES) $(APP_TOOLS)
+	install -m 0755 $(APP_BINARIES) /usr/local/bin
+	install -m 0755 $(APP_TOOLS) /usr/local/bin
 
 $(APP_BINARIES): $(SHARED_OBJECTS) $(APP_OBJECTS)
 	@echo "linking $(subst $(BASE_DIR),,$@)..."
