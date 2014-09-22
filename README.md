@@ -26,7 +26,7 @@ cascades.
 ### Compilation
 
     git submodule init
-    git submodule update
+    git submodule update --init --recursive
     make clean
     make
 
