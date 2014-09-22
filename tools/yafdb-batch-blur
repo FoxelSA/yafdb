@@ -36,5 +36,10 @@
 #      You are required to attribute the work as explained in the "Usage and
 #      Attribution" section of <http://foxel.ch/license>.
 
+if ! which parallel >/dev/null; then
+    echo "GNU parallel not installed, please install it with 'sudo apt-get install parallel'"
+    exit
+fi
+
 echo "Blurring images..."
 find yml_configs/ -iname "*.yml" | parallel --eta -j+0 yafdb-blur --merge-min-overlap 1 --algorithm progressive ../{/.}.jpeg yml_configs/{/.}.yml blurred_images/{/.}.jpeg
