@@ -17,7 +17,8 @@ SHARED_OBJECTS := $(addsuffix .o, $(basename $(SHARED_SOURCES)))
 APP_OBJECTS := $(addsuffix .o, $(basename $(APP_SOURCES)))
 
 # Programs
-APP_BINARIES := $(addprefix yafdb-, $(notdir $(basename $(APP_SOURCES))))
+BIN_DIR      := bin
+APP_BINARIES := $(addprefix $(BIN_DIR)/yafdb-, $(notdir $(basename $(APP_SOURCES))))
 APP_TOOLS := $(addprefix tools/, $(notdir $(basename $(APP_TOOLS))))
 
 # Compilation flags
@@ -40,12 +41,14 @@ clean:
 	@rm -f $(APP_BINARIES)
 	@rm -f $(APP_OBJECTS)
 	@rm -f $(SHARED_OBJECTS)
+	@rm -rf $(BIN_DIR)
 
 install: $(APP_BINARIES) $(APP_TOOLS)
 	install -m 0755 $(APP_BINARIES) /usr/local/bin
 	install -m 0755 $(APP_TOOLS) /usr/local/bin
 
 $(APP_BINARIES): $(SHARED_OBJECTS) $(APP_OBJECTS)
+	@mkdir -p $(BIN_DIR)
 	@echo "linking $(subst $(BASE_DIR),,$@)..."
 	@$(LINK.o) -o $@ $(SHARED_OBJECTS) $(realpath $(addprefix src/, $(addsuffix .o, $(subst yafdb-,,$(notdir $@))))) $(LIBRARIES)
 
