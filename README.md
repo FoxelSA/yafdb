@@ -30,7 +30,7 @@ cascades.
   - [Object export](#object-export)
   - [Object preview](#object-preview)
   - [Object validation](#object-validation)
-- [Batch tools](#batch-tools)
+- [Tools](#batch-tools)
   - [yafdb-create-directories](#yafdb-create-directories)
   - [yafdb-batch-blur](#yafdb-batch-blur)
   - [yafdb-batch-detect](#yafdb-batch-detect)
@@ -124,7 +124,7 @@ cascades.
 
     --gnomonic : activate gnomonic reprojection for visualization
 
-#### Batch tools
+#### Tools
 
 ##### yafdb-create-directories
 Creaes default directory structure
