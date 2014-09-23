@@ -1,4 +1,3 @@
-
 ## yafdb<br />Yet Another Face Detection and Bluring
 
 This project is a set of tools to detect objects in panoramic images and apply blur operation to them. It supports
@@ -22,6 +21,26 @@ poles to achieve detection in 3 passes (north, center, south).
 trained non-linear svm model. This should improve detection accuracy directly within eqr compared to haar
 cascades.
 
+### Table of Contents
+
+- [Compilation](#compilation)
+- [Usage](#usage)
+- [Main programs](#main-programs)
+  - [Object detection](#object-detection)
+  - [Object export](#object-export)
+  - [Object preview](#object-preview)
+  - [Object validation](#object-validation)
+- [Batch tools](#batch-tools)
+  - [yafdb-create-directories](#yafdb-create-directories)
+  - [yafdb-batch-blur](#yafdb-batch-blur)
+  - [yafdb-batch-detect](#yafdb-batch-detect)
+  - [yafdb-batch-extract](#yafdb-batch-extract)
+  - [yafdb-batch-validate](#yafdb-batch-validate)
+- [Controls](#controls)
+- [Object blurring](#object-blurring)
+- [Performance validation](#performance-validation)
+- [Copyright](#copyright)
+- [License](#license)
 
 ### Compilation
 
@@ -34,7 +53,9 @@ cascades.
 
 ### Usage
 
-#### Object detection
+#### Main programs
+
+##### Object detection
 
     yafdb-detect --algorithm algo input-image.tiff output-objects.yaml
 
@@ -59,7 +80,7 @@ cascades.
     --haar-min-overlap 3 : haar minimum detection overlap
 
 
-#### Object export
+##### Object export
 
     yafdb-export input-image.tiff input-objects.yaml output-path/
 
@@ -72,7 +93,7 @@ cascades.
     --format png : set exported object image format ('png', 'jpeg', 'tiff')
 
 
-#### Object preview
+##### Object preview
 
     yafdb-preview input-image.tiff input-objects.yaml
 
@@ -85,14 +106,14 @@ cascades.
     --export output-image.tiff : export detected objects in image
 
 
-#### Object validation
+##### Object validation
 
     yafdb-validate input-image.tiff input-objects.yaml output-objects.yaml
 
     Validate detected objects in source image.
 
     General options:
-    
+
     --fullscreen : Start validation window in fullscreen
     --show-invalid-objects : Display invalid objects
     --merge-disable: don't merge overlapping rectangles
@@ -103,6 +124,38 @@ cascades.
 
     --gnomonic : activate gnomonic reprojection for visualization
 
+#### Batch tools
+
+##### yafdb-create-directories
+Creaes default directory structure
+
+    yafdb-create-directories [Base path]
+
+##### yafdb-batch-blur
+Perform blurring on all images
+
+    yafdb-batch-blur [Base path]
+
+##### yafdb-batch-detect
+Perform object detection on all images
+
+    yafdb-batch-detect <HAAR cascades folder> [Base Path]
+
+##### yafdb-batch-extract
+Perform objects extraction on all images
+
+    yafdb-batch-extract [Base Path]
+
+##### yafdb-batch-validate
+Perform batch validation on all images
+
+    yafdb-batch-validate [OPTIONS]
+
+    -h --help           Prints this
+    -i --ignore         Ignore validated images
+    -c --convert        Write all yml files timestamps to state file
+    -d --dir            Base directory
+
 #### Controls
 
 * Panorama view
@@ -112,7 +165,7 @@ cascades.
         Left click then right click => Create a new zone (defined by the two previous selected points)
 
 * Edit view
-    
+
         Left click => Change rectangle position (Upper left point)
         Right click => Change rectangle size (Bottom right point)
         "t" => Edit class type
@@ -120,7 +173,7 @@ cascades.
         "n" | "Escape" => Invalidate
 
 * Type config view
-    
+
         "Escape" => Don't change the class type and close the window
         "y" | "Enter" => Validate
 
