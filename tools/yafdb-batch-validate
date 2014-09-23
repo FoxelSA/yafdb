@@ -109,7 +109,6 @@ def _usage():
     -i --ignore         Ignore validated images
     -c --convert        Write all yml files timestamps to state file
     -d --dir            Base directory
-
     """ % os.path.basename(sys.argv[0])
     return
 
@@ -150,10 +149,10 @@ def main(argv):
         elif o in ("-i", "--ignore"):
             __IGNORE_VALIDATED__ = 1
         elif o in ("-d", "--dir"):
-            
+
             # Check for base directories presence
-            if not os.path.isdir("yml_configs"):
-                print("Directory yml_configs not found, are you in a 'blurring' yafdb directory ?")
+            if not os.path.isdir(a):
+                print("Error, directory '%s' does not exists" % a)
                 sys.exit(0)
             else:
                 os.chdir(a)
