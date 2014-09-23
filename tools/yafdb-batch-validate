@@ -61,27 +61,27 @@ def HashFile(File):
     return hashlib.sha256(open(File, 'rb').read()).hexdigest()
 
 # Read validated timestamps from file
-def LoadState():
+def LoadState(File):
 
     # Variables
     List = []
 
     # Open file and insert each entry into an array
-    with open("validated.job", 'r') as f:
+    with open(File, 'r') as f:
         List = [line.rstrip('\n') for line in f]
 
     # Return the result
     return List
 
 # Write validated timestamps to a file
-def SaveState(List, ts):
+def SaveState(File, List, ts):
 
     # Insert timestamp into array if not present
     if not ts in List:
         List.append(ts)
 
     # Save array to file
-    with open("validated.job", 'w') as f:
+    with open(File, 'w') as f:
         for s in List:
             f.write(s + '\n')
 
@@ -109,6 +109,7 @@ def _usage():
     -i --ignore         Ignore validated images
     -c --convert        Write all yml files timestamps to state file
     -d --dir            Base directory
+    -s --state          State file location (Default: validated.job)
     """ % os.path.basename(sys.argv[0])
     return
 
@@ -122,10 +123,11 @@ def main(argv):
     __INDEX__            = 1
     __HASH__             = ""
     __IGNORE_VALIDATED__ = 0
+    __STATE_FILE__       = "validated.job"
 
     # Arguments parser
     try:
-        opt, args = getopt.getopt(argv, "hicd:", ["help", "ignore", "convert", "dir="])
+        opt, args = getopt.getopt(argv, "hicd:s:", ["help", "ignore", "convert", "dir=", "state="])
     except getopt.GetoptError, err:
         print str(err)
         _usage()
@@ -156,6 +158,8 @@ def main(argv):
                 sys.exit(0)
             else:
                 os.chdir(a)
+        elif o in ("-s", "--state"):
+            __STATE_FILE__ = a
         else:
             assert False, "unhandled option"
 
@@ -168,8 +172,8 @@ def main(argv):
     __TIMESTAMPS__ = [re.search(r"result_(\d+_\d+).tif", ts).group(1) for ts in glob.glob("../*.tif")]
 
     # Check if state file exists, if exists load it
-    if os.path.isfile("validated.job"):
-        __STATE__ = LoadState()
+    if os.path.isfile(__STATE_FILE__):
+        __STATE__ = LoadState(__STATE_FILE__)
 
     # Build timestamps list with non-processed items
     for ts in __TIMESTAMPS__:
@@ -200,14 +204,14 @@ def main(argv):
             if not HashFile("yml_configs/result_%s.yml" % ts) in __HASH__:
 
                 # Save validated timestamps
-                SaveState(__STATE__, ts)
+                SaveState(__STATE_FILE__, __STATE__, ts)
             else:
 
                 # Ask user to save file when no modification has been performed
                 if(yn_choice("No changes detected, do you want to mark this image as processed ?")):
 
                     # Save validated timestamps
-                    SaveState(__STATE__, ts)
+                    SaveState(__STATE_FILE__, __STATE__, ts)
         else:
             print("[Create] Processing image %d of %d (%s)" % (__INDEX__, len(__TIMESTAMPS_LEFT__), ts))
 
@@ -218,7 +222,7 @@ def main(argv):
             if os.path.isfile("yml_configs/result_%s.yml" % ts):
 
                 # Save validated timestamps
-                SaveState(__STATE__, ts)
+                SaveState(__STATE_FILE__, __STATE__, ts)
 
         # Increment file index
         __INDEX__ += 1
