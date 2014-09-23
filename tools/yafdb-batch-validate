@@ -150,7 +150,13 @@ def main(argv):
         elif o in ("-i", "--ignore"):
             __IGNORE_VALIDATED__ = 1
         elif o in ("-d", "--dir"):
-            os.chdir(a)
+            
+            # Check for base directories presence
+            if not os.path.isdir("yml_configs"):
+                print("Directory yml_configs not found, are you in a 'blurring' yafdb directory ?")
+                sys.exit(0)
+            else:
+                os.chdir(a)
         else:
             assert False, "unhandled option"
 
