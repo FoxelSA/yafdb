@@ -54,7 +54,7 @@ HAAR_PATH=$(echo $1 | sed s#//*#/#g)
 
 # Start detection
 echo "Detecting objects"
-find ../ -iname "*.tif" | parallel --eta -j1 yafdb-detect --algorithm haar \
+find ../ -maxdepth 1 -iname "*.tif" | parallel --eta -j1 yafdb-detect --algorithm haar \
         --gnomonic --gnomonic-width 2048 --gnomonic-aperture-x 90 --gnomonic-aperture-y 90 \
         --haar-model front:$HAAR_PATH/front-face.xml:1:-1 \
         --haar-model eyes:$HAAR_PATH/eyes.xml:front:0:-1 \
