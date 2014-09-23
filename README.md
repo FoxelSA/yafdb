@@ -127,7 +127,7 @@ cascades.
 #### Tools
 
 ##### yafdb-create-directories
-Creaes default directory structure
+Create default directory structure
 
     yafdb-create-directories [Base path]
 
