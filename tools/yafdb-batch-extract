@@ -36,10 +36,12 @@
 #      You are required to attribute the work as explained in the "Usage and
 #      Attribution" section of <http://foxel.ch/license>.
 
+# Check presence of GNU parallel
 if ! which parallel >/dev/null; then
     echo "GNU parallel not installed, please install it with 'sudo apt-get install parallel'"
     exit
 fi
 
+# Start exportation
 echo "Exporting objects"
 find yml_configs/ -iname "*.yml" | parallel --eta -j+0 yafdb-export --merge-min-overlap 1 --format png ../{/.}.tif yml_configs/{/.}.yml extracted_objects/{/.}

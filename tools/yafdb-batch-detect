@@ -42,6 +42,24 @@ if ! which parallel >/dev/null; then
     exit
 fi
 
-# Start blurring
-echo "Blurring images..."
-find yml_configs/ -iname "*.yml" | parallel --eta -j+0 yafdb-blur --merge-min-overlap 1 --algorithm progressive ../{/.}.tif yml_configs/{/.}.yml blurred_images/{/.}.tif
+# Arguments check
+if [ $# -eq 0 ]
+  then
+    echo "Usage: $0 <HAAR cascades folder>"
+    exit
+fi
+
+# Cleanning useless slashes from input path
+HAAR_PATH=$(echo $1 | sed s#//*#/#g)
+
+# Start detection
+echo "Detecting objects"
+find ../ -iname "*.tif" | parallel --eta -j1 yafdb-detect --algorithm haar \
+        --gnomonic --gnomonic-width 2048 --gnomonic-aperture-x 90 --gnomonic-aperture-y 90 \
+        --haar-model front:$HAAR_PATH/front-face.xml:1:-1 \
+        --haar-model eyes:$HAAR_PATH/eyes.xml:front:0:-1 \
+        --haar-model nose:$HAAR_PATH/nose.xml:front:0:-1 \
+        --haar-model profile:$HAAR_PATH/profile-face.xml:1:-1 \
+        --haar-model eyes:$HAAR_PATH/eyes.xml:profile:0:-1 \
+        --haar-model nose:$HAAR_PATH/nose.xml:profile:0:-1 \
+        "../{/.}.tif" "yml_configs/{/.}.yml"
