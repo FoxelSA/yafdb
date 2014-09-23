@@ -108,12 +108,12 @@ def _usage():
     -h --help           Prints this
     -i --ignore         Ignore validated images
     -c --convert        Write all yml files timestamps to state file
+    -d --dir            Base directory
 
     """ % os.path.basename(sys.argv[0])
     return
 
 # Program entry point function
-# pylint: disable=W0612
 def main(argv):
 
     # Variables
@@ -126,7 +126,7 @@ def main(argv):
 
     # Arguments parser
     try:
-        opt, args = getopt.getopt(argv, "hic", ["help", "ignore", "convert"])
+        opt, args = getopt.getopt(argv, "hicd:", ["help", "ignore", "convert", "dir="])
     except getopt.GetoptError, err:
         print str(err)
         _usage()
@@ -149,8 +149,15 @@ def main(argv):
             sys.exit()
         elif o in ("-i", "--ignore"):
             __IGNORE_VALIDATED__ = 1
+        elif o in ("-d", "--dir"):
+            os.chdir(a)
         else:
             assert False, "unhandled option"
+
+    # Check for base directories presence
+    if not os.path.isdir("yml_configs"):
+        print("Directory yml_configs not found, are you in a 'blurring' yafdb directory ?")
+        sys.exit(0)
 
     # Get all timestamps in images folder (results)
     __TIMESTAMPS__ = [re.search(r"result_(\d+_\d+).tif", ts).group(1) for ts in glob.glob("../*.tif")]

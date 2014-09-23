@@ -42,6 +42,18 @@ if ! which parallel >/dev/null; then
     exit
 fi
 
+# Switch to base path if specified
+if [[ ! -z $1 ]]; then
+    BASE_PATH=$(echo $1 | sed s#//*#/#g)
+    cd $BASE_PATH
+fi
+
+# Check for base directories presence
+if [ ! -d "yml_configs/" ]; then
+  echo "Directory yml_configs not found, are you in a 'blurring' yafdb directory ?"
+  exit
+fi
+
 # Start blurring
 echo "Blurring images..."
 find yml_configs/ -maxdepth 1 -iname "*.yml" | parallel --eta -j+0 yafdb-blur --merge-min-overlap 1 --algorithm progressive ../{/.}.tif yml_configs/{/.}.yml blurred_images/{/.}.tif

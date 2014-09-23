@@ -45,12 +45,24 @@ fi
 # Arguments check
 if [ $# -eq 0 ]
   then
-    echo "Usage: $0 <HAAR cascades folder>"
+    echo "Usage: $0 <HAAR cascades folder> [Base Path]"
     exit
 fi
 
 # Cleanning useless slashes from input path
 HAAR_PATH=$(echo $1 | sed s#//*#/#g)
+
+# Switch to base path if specified
+if [[ ! -z $2 ]]; then
+    BASE_PATH=$(echo $2 | sed s#//*#/#g)
+    cd $BASE_PATH
+fi
+
+# Check for base directories presence
+if [ ! -d "yml_configs/" ]; then
+  echo "Directory yml_configs not found, are you in a 'blurring' yafdb directory ?"
+  exit
+fi
 
 # Start detection
 echo "Detecting objects"

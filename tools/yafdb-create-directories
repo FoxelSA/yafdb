@@ -36,6 +36,12 @@
 #      You are required to attribute the work as explained in the "Usage and
 #      Attribution" section of <http://foxel.ch/license>.
 
+# Switch to base path if specified
+if [[ ! -z $1 ]]; then
+    BASE_PATH=$(echo $1 | sed s#//*#/#g)
+    cd $BASE_PATH
+fi
+
 mkdir -p "blurring/blurred_images"
 mkdir -p "blurring/yml_configs"
 mkdir -p "blurring/extracted_objects"
