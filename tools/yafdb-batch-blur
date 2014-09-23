@@ -42,4 +42,4 @@ if ! which parallel >/dev/null; then
 fi
 
 echo "Blurring images..."
-find yml_configs/ -iname "*.yml" | parallel --eta -j+0 yafdb-blur --merge-min-overlap 1 --algorithm progressive ../{/.}.jpeg yml_configs/{/.}.yml blurred_images/{/.}.jpeg
+find yml_configs/ -iname "*.yml" | parallel --eta -j+0 yafdb-blur --merge-min-overlap 1 --algorithm progressive ../{/.}.tif yml_configs/{/.}.yml blurred_images/{/.}.tif

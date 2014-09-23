@@ -42,4 +42,4 @@ if ! which parallel >/dev/null; then
 fi
 
 echo "Exporting objects"
-find yml_configs/ -iname "*.yml" | parallel --eta -j+0 yafdb-export --merge-min-overlap 1 --format png ../{/.}.jpeg yml_configs/{/.}.yml extracted_objects/{/.}
+find yml_configs/ -iname "*.yml" | parallel --eta -j+0 yafdb-export --merge-min-overlap 1 --format png ../{/.}.tif yml_configs/{/.}.yml extracted_objects/{/.}
