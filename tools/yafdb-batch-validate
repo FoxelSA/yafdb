@@ -1,71 +1,216 @@
-#!/bin/bash
-#
-# yafdb - Yet Another Face Detection and Bluring
-#
-# Copyright (c) 2014 FOXEL SA - http://foxel.ch
-# Please read <http://foxel.ch/license> for more information.
-#
-#
-# Author(s):
-#
-#      Kevin Velickovic <k.velickovic@foxel.ch>
-#
-#
-# This file is part of the FOXEL project <http://foxel.ch>.
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
-# Additional Terms:
-#
-#      You are required to preserve legal notices and author attributions in
-#      that material or in the Appropriate Legal Notices displayed by works
-#      containing it.
-#
-#      You are required to attribute the work as explained in the "Usage and
-#      Attribution" section of <http://foxel.ch/license>.
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
-FilesCount=0
-FilesProcessed=1
+"""
+  yafdb - Yet Another Face Detection and Bluring
 
-for f in ../*.jpeg
-do
- 	TimeStamp=$(basename $f .jpeg)
-	if [ ! -f yml_configs/$TimeStamp.yml ]
-	then
-		FilesCount=$((FilesCount+1))
-	else
-		if [ "$1" == "-v" ]; then
-		    FilesCount=$((FilesCount+1))
-		fi		
-	fi
-done
+  Copyright (c) 2014 FOXEL SA - http://foxel.ch
+  Please read <http://foxel.ch/license> for more information.
 
-for f in ../*.jpeg
-do
 
- 	TimeStamp=$(basename $f .jpeg)
-	if [ ! -f yml_configs/$TimeStamp.yml ]
-	then
-	    echo Processing $TimeStamp $FilesProcessed/$FilesCount
-	    yafdb-validate --fullscreen --gnomonic ../$TimeStamp.jpeg yml_configs/$TimeStamp.yml
-	    FilesProcessed=$((FilesProcessed+1))
-	else
-		if [ "$1" == "-v" ]; then
-		    echo Validating $TimeStamp $FilesProcessed/$FilesCount
-		    yafdb-validate --fullscreen --auto-validate --gnomonic ../$TimeStamp.jpeg yml_configs/$TimeStamp.yml yml_configs/$TimeStamp.yml
-		    FilesProcessed=$((FilesProcessed+1))
-		fi
-	fi
-done
+  Author(s):
+
+       Kevin Velickovic <k.velickovic@foxel.ch>
+
+
+  This file is part of the FOXEL project <http://foxel.ch>.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+  Additional Terms:
+
+       You are required to preserve legal notices and author attributions in
+       that material or in the Appropriate Legal Notices displayed by works
+       containing it.
+
+       You are required to attribute the work as explained in the "Usage and
+       Attribution" section of <http://foxel.ch/license>.
+"""
+
+import getopt
+import glob
+import hashlib
+import os
+import re
+import signal
+import sys
+
+
+# Function to catch CTRL-C
+def signal_handler(_signal, _frame):
+    del _signal
+    del _frame
+    print("Interrupted!")
+    sys.exit(0)
+signal.signal(signal.SIGINT, signal_handler)
+
+# Compute SHA-256 hash of specified file
+def HashFile(File):
+    return hashlib.sha256(open(File, 'rb').read()).hexdigest()
+
+# Read validated timestamps from file
+def LoadState():
+
+    # Variables
+    List = []
+
+    # Open file and insert each entry into an array
+    with open("validated.job", 'r') as f:
+        List = [line.rstrip('\n') for line in f]
+
+    # Return the result
+    return List
+
+# Write validated timestamps to a file
+def SaveState(List, ts):
+
+    # Insert timestamp into array if not present
+    if not ts in List:
+        List.append(ts)
+
+    # Save array to file
+    with open("validated.job", 'w') as f:
+        for s in List:
+            f.write(s + '\n')
+
+# Ask user for y/n input
+def yn_choice(message, default='n'):
+
+    # Default choices
+    choices = 'y/N' if default.lower() in ('y', 'yes') else 'y/N'
+
+    # User input choice
+    choice = raw_input("%s (%s) " % (message, choices))
+
+    # Default values
+    values = ('y', 'yes', '') if default == 'y' else ('y', 'yes')
+
+    # Compare input and return result
+    return choice.strip().lower() in values
+
+# Prints usage
+def _usage():
+    print """
+    Usage: %s [OPTIONS]
+
+    -h --help           Prints this
+    -i --ignore         Ignore validated images
+    -c --convert        Write all yml files timestamps to state file
+
+    """ % os.path.basename(sys.argv[0])
+    return
+
+# Program entry point function
+# pylint: disable=W0612
+def main(argv):
+
+    # Variables
+    __STATE__            = []
+    __TIMESTAMPS__       = []
+    __TIMESTAMPS_LEFT__  = []
+    __INDEX__            = 1
+    __HASH__             = ""
+    __IGNORE_VALIDATED__ = 0
+
+    # Arguments parser
+    try:
+        opt, args = getopt.getopt(argv, "hic", ["help", "ignore", "convert"])
+    except getopt.GetoptError, err:
+        print str(err)
+        _usage()
+        sys.exit(2)
+    for o, a in opt:
+        if o in ("-h", "--help"):
+            _usage()
+            sys.exit()
+        if o in ("-c", "--convert"):
+
+            # Get timestamps
+            __TIMESTAMPS__ = [re.search(r"result_(\d+_\d+).*.yml", ts).group(1) for ts in glob.glob("yml_configs/*.yml")]
+
+            # Write timestamps to file
+            with open("validated.job", 'w') as f:
+                for s in __TIMESTAMPS__:
+                    f.write(s + '\n')
+
+            # Exit program
+            sys.exit()
+        elif o in ("-i", "--ignore"):
+            __IGNORE_VALIDATED__ = 1
+        else:
+            assert False, "unhandled option"
+
+    # Get all timestamps in images folder (results)
+    __TIMESTAMPS__ = [re.search(r"result_(\d+_\d+).tif", ts).group(1) for ts in glob.glob("../*.tif")]
+
+    # Check if state file exists, if exists load it
+    if os.path.isfile("validated.job"):
+        __STATE__ = LoadState()
+
+    # Build timestamps list with non-processed items
+    for ts in __TIMESTAMPS__:
+        if not ts in __STATE__:
+            __TIMESTAMPS_LEFT__.append(ts)
+        elif __IGNORE_VALIDATED__:
+            __TIMESTAMPS_LEFT__.append(ts)
+
+    # Verify number of items left
+    if len(__TIMESTAMPS_LEFT__) == 0:
+        print("No image(s) to process")
+        return
+
+    # Walk over timestamps
+    for ts in __TIMESTAMPS_LEFT__:
+
+        # Check if image yml file exists
+        if os.path.isfile("yml_configs/result_%s.yml" % ts):
+            print("[Edit] Processing image %d of %d (%s)" % (__INDEX__, len(__TIMESTAMPS_LEFT__), ts))
+
+            # Hash file for future comparison
+            __HASH__ = HashFile("yml_configs/result_%s.yml" % ts)
+
+            # Start validation
+            os.system("yafdb-validate --fullscreen --auto-validate --gnomonic ../result_%s.tif yml_configs/result_%s.yml yml_configs/result_%s.yml" % (ts, ts, ts))
+
+            # Compare stored hash with new hash
+            if not HashFile("yml_configs/result_%s.yml" % ts) in __HASH__:
+
+                # Save validated timestamps
+                SaveState(__STATE__, ts)
+            else:
+
+                # Ask user to save file when no modification has been performed
+                if(yn_choice("No changes detected, do you want to mark this image as processed ?")):
+
+                    # Save validated timestamps
+                    SaveState(__STATE__, ts)
+        else:
+            print("[Create] Processing image %d of %d (%s)" % (__INDEX__, len(__TIMESTAMPS_LEFT__), ts))
+
+            # Start validation
+            os.system("yafdb-validate --fullscreen --auto-validate --gnomonic ../result_%s.tif yml_configs/result_%s.yml" % (ts, ts))
+
+            # Check if image yml file exists
+            if os.path.isfile("yml_configs/result_%s.yml" % ts):
+
+                # Save validated timestamps
+                SaveState(__STATE__, ts)
+
+        # Increment file index
+        __INDEX__ += 1
+
+# Program entry point
+if __name__ == "__main__":
+    main(sys.argv[1:])
