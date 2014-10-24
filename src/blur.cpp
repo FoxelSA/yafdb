@@ -360,10 +360,11 @@ int main(int argc, char **argv) {
             }
             break;
 
+        case OPTION_MERGE_DISABLE:
+            break;
         case OPTION_MERGE_MIN_OVERLAP:
             merge_min_overlap = atoi(optarg);
             break;
-
         case OPTION_GAUSSIAN_KERNEL:
             gaussian_kernel_size = atof(optarg);
             break;
