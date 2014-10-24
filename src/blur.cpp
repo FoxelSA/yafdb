@@ -291,7 +291,7 @@ void usage() {
 
     printf("General options:\n\n");
     printf("--algorithm algo : algorithm to use for blurring ('gaussian', 'progressive')\n");
-    printf("--merge-disable: don't merge overlapping rectangles\n");
+    printf("--merge-disable : don't merge overlapping rectangles\n");
     printf("--merge-min-overlap 1 : minimum occurrence of overlap to keep detected objects\n");
     printf("\n");
 
