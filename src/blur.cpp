@@ -65,17 +65,19 @@
  */
 
 #define OPTION_ALGORITHM              0
-#define OPTION_MERGE_MIN_OVERLAP      1
-#define OPTION_GAUSSIAN_KERNEL        2
-#define OPTION_GAUSSIAN_STEPS         3
-#define OPTION_MAGNIFY_FACTOR         4
-#define OPTION_RESIZE_WIDTH           5
-#define OPTION_RESIZE_HEIGHT          6
+#define OPTION_MERGE_DISABLE          1
+#define OPTION_MERGE_MIN_OVERLAP      2
+#define OPTION_GAUSSIAN_KERNEL        3
+#define OPTION_GAUSSIAN_STEPS         4
+#define OPTION_MAGNIFY_FACTOR         5
+#define OPTION_RESIZE_WIDTH           6
+#define OPTION_RESIZE_HEIGHT          7
 
 static int resize_width = 0;
 static int resize_height = 0;
 static int algorithm = ALGORITHM_GAUSSIAN;
 static int merge_min_overlap = 1;
+static int merge_enabled = 1;
 static double gaussian_kernel_size = 65;
 static double gaussian_steps = 1;
 static double magnify_factor = 1.0;
@@ -86,6 +88,7 @@ static const char *target_file = NULL;
 
 static struct option options[] = {
     {"algorithm",           required_argument, 0,                 'a'},
+    {"merge-disable",       no_argument,       &merge_enabled,     0 },
     {"merge-min-overlap",   required_argument, 0,                  0 },
     {"gaussian-kernel",     required_argument, 0,                  0 },
     {"gaussian-steps",      required_argument, 0,                  0 },
@@ -288,6 +291,7 @@ void usage() {
 
     printf("General options:\n\n");
     printf("--algorithm algo : algorithm to use for blurring ('gaussian', 'progressive')\n");
+    printf("--merge-disable: don't merge overlapping rectangles\n");
     printf("--merge-min-overlap 1 : minimum occurrence of overlap to keep detected objects\n");
     printf("\n");
 
@@ -399,7 +403,9 @@ int main(int argc, char **argv) {
     }
 
     // merge detected objects
-    ObjectDetector::merge(objects, merge_min_overlap);
+    if (merge_enabled) {
+        ObjectDetector::merge(objects, merge_min_overlap);
+    }
 
     // apply blur operation
     for (int i = 0; i < gaussian_steps; ++i)

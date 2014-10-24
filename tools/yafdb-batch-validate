@@ -198,7 +198,7 @@ def main(argv):
             __HASH__ = HashFile("yml_configs/result_%s.yml" % ts)
 
             # Start validation
-            os.system("yafdb-validate --fullscreen --auto-validate --gnomonic ../result_%s.tif yml_configs/result_%s.yml yml_configs/result_%s.yml" % (ts, ts, ts))
+            os.system("yafdb-validate --fullscreen --merge-disable --gnomonic ../result_%s.tif yml_configs/result_%s.yml yml_configs/result_%s.yml" % (ts, ts, ts))
 
             # Compare stored hash with new hash
             if not HashFile("yml_configs/result_%s.yml" % ts) in __HASH__:
@@ -216,7 +216,7 @@ def main(argv):
             print("[Create] Processing image %d of %d (%s)" % (__INDEX__, len(__TIMESTAMPS_LEFT__), ts))
 
             # Start validation
-            os.system("yafdb-validate --fullscreen --auto-validate --gnomonic ../result_%s.tif yml_configs/result_%s.yml" % (ts, ts))
+            os.system("yafdb-validate --fullscreen --merge-disable --gnomonic ../result_%s.tif yml_configs/result_%s.yml" % (ts, ts))
 
             # Check if image yml file exists
             if os.path.isfile("yml_configs/result_%s.yml" % ts):

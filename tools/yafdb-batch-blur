@@ -56,4 +56,4 @@ fi
 
 # Start blurring
 echo "Blurring images..."
-find yml_configs/ -maxdepth 1 -iname "*.yml" | parallel --eta -j+0 yafdb-blur --merge-min-overlap 1 --algorithm progressive ../{/.}.tif yml_configs/{/.}.yml blurred_images/{/.}.tif
+find yml_configs/ -maxdepth 1 -iname "*.yml" | parallel --eta -j+0 yafdb-blur --merge-disable --algorithm progressive --magnify-factor 1.3 ../{/.}.tif yml_configs/{/.}.yml blurred_images/{/.}.tif
