@@ -56,5 +56,5 @@ if [ ! -d "yml_configs/" ]; then
 fi
 
 # Start validation
-yafdb-validate --fullscreen --merge-disable --gnomonic \
+yafdb-validate --fullscreen --auto-validate --merge-disable --gnomonic \
 ../result_$1.tif yml_configs/result_$1.yml yml_configs/result_$1.yml
