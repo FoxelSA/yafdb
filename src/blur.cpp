@@ -68,8 +68,9 @@
 #define OPTION_MERGE_MIN_OVERLAP      1
 #define OPTION_GAUSSIAN_KERNEL        2
 #define OPTION_GAUSSIAN_STEPS         3
-#define OPTION_RESIZE_WIDTH           4
-#define OPTION_RESIZE_HEIGHT          5
+#define OPTION_MAGNIFY_FACTOR         4
+#define OPTION_RESIZE_WIDTH           5
+#define OPTION_RESIZE_HEIGHT          6
 
 static int resize_width = 0;
 static int resize_height = 0;
@@ -77,6 +78,7 @@ static int algorithm = ALGORITHM_GAUSSIAN;
 static int merge_min_overlap = 1;
 static double gaussian_kernel_size = 65;
 static double gaussian_steps = 1;
+static double magnify_factor = 1.0;
 static const char *source_file = NULL;
 static const char *objects_file = NULL;
 static const char *target_file = NULL;
@@ -87,6 +89,7 @@ static struct option options[] = {
     {"merge-min-overlap",   required_argument, 0,                  0 },
     {"gaussian-kernel",     required_argument, 0,                  0 },
     {"gaussian-steps",      required_argument, 0,                  0 },
+    {"magnify-factor",      required_argument, 0,                  0 },
     {"resize-width",        required_argument, 0,                  0 },
     {"resize-height",       required_argument, 0,                  0 },
     {0, 0, 0, 0}
@@ -177,7 +180,7 @@ void progblur ( unsigned char * pbBitmap, int pbWidth, int pbHeight, int pbChann
             /* Reset chromatic accumulator */
             pbAccumR = 0.0;
             pbAccumG = 0.0;
-            pbAccumB = 0.0; 
+            pbAccumB = 0.0;
 
             /* Compute coordinates u-parameters */
             pbU = ( ( float ) ( pbX - pbRx1 ) / pbrWidth  ) * 2.0 - 1.0;
@@ -231,6 +234,48 @@ void progblur ( unsigned char * pbBitmap, int pbWidth, int pbHeight, int pbChann
 
 }
 
+//! Rectangle magnifier
+
+//! Magnify specified rectangle by a multiplier
+//!
+//! @param multiplier Multiplier
+//! @param source_x x cordinates of source rectangle
+//! @param source_y y cordinates of source rectangle
+//! @param source_w Width of source rectangle
+//! @param source_h Height of source rectangle
+//! @param dest_x   Destination variable to store magnified x coordinates
+//! @param dest_y   Destination variable to store magnified y coordinates
+//! @param dest_xw  Destination variable to store magnified x + Width
+//! @param dest_yh  Destination variable to store magnified y + Height
+
+void magnifyRect
+(
+    float multiplier,
+    float source_x,  float source_y,
+    float source_w,  float source_h,
+    float * dest_x,  float * dest_y,
+    float * dest_xw, float * dest_yh
+)
+{
+    /* Determine center of coordinates */
+    float xc = ((source_x * 2) + source_w) / 2;
+    float yc = ((source_y * 2) + source_h) / 2;
+
+    /* Determine the frame of coordinates */
+    float x_p = (source_x - xc) * multiplier;
+    float y_p = (source_y - yc) * multiplier;
+
+    /* Apply multiplier */
+    float x_p2 = ((source_x + source_w) - xc) * multiplier;
+    float y_p2 = ((source_y + source_h) - yc) * multiplier;
+
+    /* Compute results */
+    *dest_x = (x_p + xc);
+    *dest_y = (y_p + yc);
+
+    *dest_xw = (x_p2 + xc);
+    *dest_yh = (y_p2 + yc);
+}
 
 /**
  * Display program usage.
@@ -249,6 +294,10 @@ void usage() {
     printf("Gaussian options:\n\n");
     printf("--gaussian-kernel 65 : gaussian kernel size\n");
     printf("--gaussian-steps 1 : gaussian blurring steps\n");
+    printf("\n");
+
+    printf("Progressive options:\n\n");
+    printf("--magnify-factor 1.0 : Rectangles magnify factor\n");
     printf("\n");
 
     printf("Resizing options:\n\n");
@@ -317,6 +366,9 @@ int main(int argc, char **argv) {
         case OPTION_GAUSSIAN_STEPS:
             gaussian_steps = atof(optarg);
             break;
+        case OPTION_MAGNIFY_FACTOR:
+            magnify_factor = atof(optarg);
+            break;
         case OPTION_RESIZE_WIDTH:
             resize_width = atoi(optarg);
             break;
@@ -378,16 +430,54 @@ int main(int argc, char **argv) {
 
                     case ALGORITHM_PROGRESSIVE:
                     {
-                        progblur (  
-                            source.data, 
-                            source.cols, 
-                            source.rows,
-                            source.channels(), 
-                            rect.x,
-                            rect.y,
-                            rect.x + rect.width,
-                            rect.y + rect.height
-                        );
+
+                        // Check presence of magnify parameter
+                        if(magnify_factor != 1.0)
+                        {
+                            // Magnifier variables
+                            float magnified_x  = 0.0;
+                            float magnified_y  = 0.0;
+                            float magnified_xw = 0.0;
+                            float magnified_yh = 0.0;
+
+                            // Magnify rectangle
+                            magnifyRect(
+                                magnify_factor,
+                                rect.x,
+                                rect.y,
+                                rect.width,
+                                rect.height,
+                                &magnified_x,
+                                &magnified_y,
+                                &magnified_xw,
+                                &magnified_yh
+                            );
+
+                            // Apply progressive blur
+                            progblur (
+                                source.data,
+                                source.cols,
+                                source.rows,
+                                source.channels(),
+                                magnified_x,
+                                magnified_y,
+                                magnified_xw,
+                                magnified_yh
+                            );
+                        } else {
+
+                            // Apply progressive blur
+                            progblur (
+                                source.data,
+                                source.cols,
+                                source.rows,
+                                source.channels(),
+                                rect.x,
+                                rect.y,
+                                rect.x + rect.width,
+                                rect.y + rect.height
+                            );
+                        }
                     }
                     break;
 
