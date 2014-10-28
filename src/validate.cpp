@@ -430,6 +430,13 @@ int main(int argc, char **argv) {
                         object.area.p2.y = offset.y + rect.y + rect.height;
                     }
                     object.falsePositive = "Yes";
+
+                    if (!object.children.empty()) {
+                        for (auto itc = object.children.begin(); itc != object.children.end(); ++itc) {
+                            (*itc).falsePositive = "Yes";
+                        }
+                    }
+
                     invalidObjects.push_back(object);
                 }
                 return;
