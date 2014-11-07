@@ -1,4 +1,4 @@
-## yafdb<br />Yet Another Face Detection and Bluring
+## yafdb<br />Yet Another Face Detection and Blurring
 
 This project is a set of tools to detect objects in panoramic images and apply blur operation to them. It supports
 currently input images in EQR (equirectangular) projection and outputs coordinates of detected objects as well as
