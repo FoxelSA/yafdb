@@ -343,7 +343,7 @@ bool GnomonicTransform::toEqr(const BoundingBox &src, BoundingBox &dst) const {
 }
 
 
-DetectedObject::DetectedObject(const cv::FileNode &node) : className(node["className"]), area(node["area"]), falsePositive(node["falsePositive"]) {
+DetectedObject::DetectedObject(const cv::FileNode &node) : className(node["className"]), area(node["area"]), falsePositive(node["falsePositive"]), autoStatus(node["autoStatus"]), manualStatus(node["manualStatus"]) {
     auto childrenNode = node["children"];
 
     for (auto it = childrenNode.begin(); it != childrenNode.end(); ++it) {
@@ -357,6 +357,8 @@ void DetectedObject::write(cv::FileStorage &fs) const {
         fs << "area";
         this->area.write(fs);
         fs << "falsePositive" << (this->falsePositive.length() > 0 ? this->falsePositive : "No");
+        fs << "autoStatus"    << (this->autoStatus.length() > 0 ? this->autoStatus : "None");
+        fs << "manualStatus"  << (this->manualStatus.length() > 0 ? this->manualStatus : "None");
         if (!this->children.empty()) {
             fs << "children" << "[";
                 for (auto it = this->children.begin(); it != this->children.end(); ++it) {
@@ -564,11 +566,15 @@ void ObjectDetector::merge(std::list<DetectedObject> &objects, int minOverlap) {
         BoundingBox area(v[i].area);
         std::set<std::string> classNames;
         std::set<std::string> falsePositives;
+        std::set<std::string> autoStatuses;
+        std::set<std::string> manualStatuses;
         std::list<DetectedObject> children(v[i].children);
         int count = 1;
 
         classNames.insert(v[i].className);
         falsePositives.insert(v[i].falsePositive);
+        autoStatuses.insert(v[i].autoStatus);
+        manualStatuses.insert(v[i].manualStatus);
 
         for (unsigned int j = i + 1; j < v.size(); j++) {
             if (used.find(j) != used.end()) {
@@ -577,6 +583,8 @@ void ObjectDetector::merge(std::list<DetectedObject> &objects, int minOverlap) {
             if (area.mergeIfOverlap(v[j].area)) {
                 classNames.insert(v[j].className);
                 falsePositives.insert(v[j].falsePositive);
+                autoStatuses.insert(v[j].autoStatus);
+                manualStatuses.insert(v[j].manualStatus);
                 children.insert(children.end(), v[j].children.begin(), v[j].children.end());
                 used.insert(j);
                 count++;
@@ -593,6 +601,8 @@ void ObjectDetector::merge(std::list<DetectedObject> &objects, int minOverlap) {
         if (count >= minOverlap) {
             std::string className;
             std::string falsePositiveName;
+            std::string autoStatusName;
+            std::string manualStatusName;
 
             for (auto it = classNames.begin(); it != classNames.end(); ++it) {
                 if (!className.empty()) {
@@ -608,9 +618,23 @@ void ObjectDetector::merge(std::list<DetectedObject> &objects, int minOverlap) {
                 falsePositiveName.append(*it);
             }
 
+            for (auto it = autoStatuses.begin(); it != autoStatuses.end(); ++it) {
+                if (!autoStatusName.empty()) {
+                    autoStatusName.append(":");
+                }
+                autoStatusName.append(*it);
+            }
+
+            for (auto it = manualStatuses.begin(); it != manualStatuses.end(); ++it) {
+                if (!manualStatusName.empty()) {
+                    manualStatusName.append(":");
+                }
+                manualStatusName.append(*it);
+            }
+
             ObjectDetector::merge(children);
 
-            objects.push_back(DetectedObject(className, area, falsePositiveName, children));
+            objects.push_back(DetectedObject(className, area, falsePositiveName, autoStatusName, manualStatusName, children));
         }
     }
 }
@@ -712,6 +736,8 @@ void ObjectDetector::exportImages(const std::string &exportPath, const std::stri
             fs << "area";
             object.area.write(fs);
             fs << "falsePositive" << (object.falsePositive.length() > 0 ? object.falsePositive : "No");
+            fs << "autoStatus"    << (object.autoStatus.length() > 0 ? object.autoStatus : "None");
+            fs << "manualStatus"  << (object.manualStatus.length() > 0 ? object.manualStatus : "None");
 
             if (!object.children.empty()) {
                 int childIndex = 0;

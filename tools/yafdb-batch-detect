@@ -45,7 +45,7 @@ fi
 # Arguments check
 if [ $# -eq 0 ]
   then
-    echo "Usage: $0 <HAAR cascades folder> [Base Path]"
+    echo "Usage: $0 <HAAR cascades folder> [Results folder]"
     exit
 fi
 
@@ -55,7 +55,12 @@ HAAR_PATH=$(echo $1 | sed s#//*#/#g)
 # Switch to base path if specified
 if [[ ! -z $2 ]]; then
     BASE_PATH=$(echo $2 | sed s#//*#/#g)
-    cd $BASE_PATH
+
+    mkdir -p "$BASE_PATH/blurring/blurred_images"
+    mkdir -p "$BASE_PATH/blurring/yml_configs"
+    mkdir -p "$BASE_PATH/blurring/extracted_objects"
+
+    cd "$BASE_PATH/blurring"
 fi
 
 # Check for base directories presence

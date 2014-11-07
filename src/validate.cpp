@@ -54,12 +54,13 @@
  *
  */
 
-#define OPTION_FULLSCREEN             0
-#define OPTION_SHOW_INVALID_OBJECTS   1
-#define OPTION_MERGE_DISABLE          2
-#define OPTION_MERGE_MIN_OVERLAP      3
-#define OPTION_AUTO_VALIDATE          4
-#define OPTION_GNOMONIC               5
+#define OPTION_IMAGE_WIDTH            0
+#define OPTION_FULLSCREEN             1
+#define OPTION_SHOW_INVALID_OBJECTS   2
+#define OPTION_MERGE_DISABLE          3
+#define OPTION_MERGE_MIN_OVERLAP      4
+#define OPTION_AUTO_VALIDATE          5
+#define OPTION_GNOMONIC               6
 
 
 int type_slider = 0;
@@ -72,12 +73,14 @@ static int merge_enabled = 1;
 static int merge_min_overlap = 1;
 static int auto_validate = 0;
 static int gnomonic_enabled = 0;
+static int image_width = 7134;
 static const char *source_file = NULL;
 static const char *objects_file = NULL;
 static const char *target_file = NULL;
 
 
 static struct option options[] = {
+    {"image-width",          required_argument, 0,                     0 },
     {"fullscreen",           no_argument,       &fullscreen,           1 },
     {"show-invalid-objects", no_argument,       &show_invalid_objects, 1 },
     {"merge-disable",        no_argument,       &merge_enabled,        0 },
@@ -108,6 +111,7 @@ void usage() {
     printf("Validate detected objects in source image.\n\n");
 
     printf("General options:\n\n");
+    printf("--image-width 7134 : Default image width during validation\n");
     printf("--fullscreen : Start validation window in fullscreen\n");
     printf("--show-invalid-objects : Display invalid objects\n");
     printf("--merge-disable: don't merge overlapping rectangles\n");
@@ -280,6 +284,11 @@ int main(int argc, char **argv) {
         }
 
         switch (index) {
+
+        case OPTION_IMAGE_WIDTH:
+            image_width = atoi(optarg);
+            break;
+
         case OPTION_FULLSCREEN:
             break;
 
@@ -330,7 +339,7 @@ int main(int argc, char **argv) {
     }
 
     // object editors
-    int eqrWidth = 1600;
+    int eqrWidth = image_width;
     int eqrHeight = eqrWidth * source.rows / source.cols;
     std::list<DetectedObject> validObjects;
     std::list<DetectedObject> invalidObjects;
@@ -456,13 +465,17 @@ int main(int argc, char **argv) {
             object = DetectedObject(
                 "manual",
                 BoundingBox(BoundingBox::SPHERICAL, pixelsToSpherical(p1), pixelsToSpherical(p2)),
-                "No"
+                "No",
+                "None",
+                "None"
             );
         } else {
             object = DetectedObject(
                 "manual",
                 BoundingBox(cv::Rect(p1.x, p1.y, p1.x + p2.x, p1.y + p2.y)),
-                "No"
+                "No",
+                "None",
+                "None"
             );
         }
         editObject(object, true);

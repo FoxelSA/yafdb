@@ -337,6 +337,12 @@ public:
     /** Is false positive ? */
     std::string falsePositive;
 
+    /** Status of automatic detection ? */
+    std::string autoStatus;
+
+    /** Status of manual validation ? */
+    std::string manualStatus;
+
     /** Children objects */
     std::list<DetectedObject> children;
 
@@ -353,8 +359,10 @@ public:
      * \param className object class name
      * \param area bounding area
      * \param falsePositive Is false positive ?
+     * \param autoStatus Status of automatic detection
+     * \param manualStatus Status of manual validation
      */
-    DetectedObject(const std::string &className, const BoundingBox &area, const std::string &falsePositive) : className(className), area(area), falsePositive(falsePositive) {
+    DetectedObject(const std::string &className, const BoundingBox &area, const std::string &falsePositive, const std::string &autoStatus, const std::string &manualStatus) : className(className), area(area), falsePositive(falsePositive), autoStatus(autoStatus), manualStatus(manualStatus) {
     }
 
     /**
@@ -363,15 +371,17 @@ public:
      * \param className object class name
      * \param area bounding area
      * \param falsePositive Is false positive ?
+     * \param autoStatus Status of automatic detection
+     * \param manualStatus Status of manual validation
      * \param children children objects
      */
-    DetectedObject(const std::string &className, const BoundingBox &area, const std::string &falsePositive, const std::list<DetectedObject> &children) : className(className), area(area), falsePositive(falsePositive), children(children) {
+    DetectedObject(const std::string &className, const BoundingBox &area, const std::string &falsePositive, const std::string &autoStatus, const std::string &manualStatus, const std::list<DetectedObject> &children) : className(className), area(area), falsePositive(falsePositive), autoStatus(autoStatus), manualStatus(manualStatus), children(children) {
     }
 
     /**
      * Copy constructor.
      */
-    DetectedObject(const DetectedObject &ref) : className(ref.className), area(ref.area), falsePositive(ref.falsePositive), children(ref.children) {
+    DetectedObject(const DetectedObject &ref) : className(ref.className), area(ref.area), falsePositive(ref.falsePositive), autoStatus(ref.autoStatus), manualStatus(ref.manualStatus), children(ref.children) {
     }
 
     /**
