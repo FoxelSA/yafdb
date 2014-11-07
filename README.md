@@ -58,26 +58,38 @@ cascades.
 ##### Object detection
 
     yafdb-detect --algorithm algo input-image.tiff output-objects.yaml
-
+    
     Detects objects within input image. Detected objects are written to a yaml file.
-
+    
     General options:
-
+    
+    --full-invalid : Mark all detected objects as invalid
+    --merge-valid-objects : Merge overlapping valid objects rectangles
+    --merge-min-overlap 1 : Minimum occurrence of overlap to keep detected objects
     --algorithm algo : algorithm to use for object detection ('haar')
-
+    
     Gnomonic projection options:
-
-    --gnomonic : activate task
-    --gnomonic-width 2048 : projection window width
+    
+    --gnomonic               : activate task
+    --gnomonic-width 2048    : projection window width
     --gnomonic-aperture-x 60 : horizontal projection aperture
     --gnomonic-aperture-y 60 : vertical projection aperture
-
+    
+    Filtering options:
+    
+    --filters-disable : Disable filtering
+    --flter-ratio-min 0.7 : Minimum detected object ratio filtering threshold
+    --flter-ratio-max 1.3 : Maximum detected object ratio filtering threshold
+    --flter-size-max-width 3000  : Maximum detected object width filtering threshold
+    --flter-size-max-height 3000  : Maximum detected object height filtering threshold
+    
     Haar-cascades options:
-
-    --haar-model class:file.xml[:minChild:maxChild] : parent haar model file with class name (allowed multiple times)
+    
+    --haar-model class:file.xml[:minChild:maxChild]   : parent haar model file with class name (allowed multiple times)
     --haar-model class:file.xml:parentclass[:min:max] : child haar model file with class name (allowed multiple times)
-    --haar-scale 1.1 : haar reduction scale factor
-    --haar-min-overlap 3 : haar minimum detection overlap
+    --haar-scale 1.1                                  : haar reduction scale factor
+    --haar-min-overlap 3                              : haar minimum detection overlap
+
 
 
 ##### Object export
@@ -108,20 +120,21 @@ cascades.
 
 ##### Object validation
 
-    yafdb-validate input-image.tiff input-objects.yaml output-objects.yaml
-
+    yafdb-validate input-image.tiff [input-objects.yaml] output-objects.yaml
+    
     Validate detected objects in source image.
-
+    
     General options:
-
+    
+    --image-width 7134 : Default image width during validation
     --fullscreen : Start validation window in fullscreen
     --show-invalid-objects : Display invalid objects
     --merge-disable: don't merge overlapping rectangles
     --merge-min-overlap 1 : minimum occurrence of overlap to keep detected objects
     --auto-validate : enable auto-validation instead of manual validation
-
+    
     Gnomonic projection options:
-
+    
     --gnomonic : activate gnomonic reprojection for visualization
 
 #### Tools
